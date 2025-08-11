@@ -17,6 +17,7 @@ export const countries = pgTable("countries", (t) => ({
   name: t.text().notNull(),
   code: t.text().notNull(), // ISO 3166-1 alpha-2 code
   region: t.text(), // continent/region
+  currency: t.text(), // ISO 4217 currency code
   createdAt: t
     .timestamp()
     .$defaultFn(() => new Date())
@@ -109,6 +110,45 @@ export const trips = pgTable(
     datesIdx: index("trips_dates_idx").on(table.startDate, table.endDate),
   })
 );
+
+export const tripItinerary = pgTable("trip_itinerary", (t) => ({
+  id: t.serial().primaryKey(),
+  tripId: t
+    .text()
+    .notNull()
+    .references(() => trips.id, { onDelete: "cascade" }),
+  date: t.date().notNull(),
+  notes: t.text(),
+  createdAt: t
+    .timestamp()
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: t
+    .timestamp()
+    .$defaultFn(() => new Date())
+    .notNull(),
+}));
+
+export const tripPlaces = pgTable("trip_places", (t) => ({
+  id: t.serial().primaryKey(),
+  tripItineraryId: t
+    .integer()
+    .notNull()
+    .references(() => tripItinerary.id, { onDelete: "cascade" }),
+  name: t.text().notNull(),
+  type: t.text().notNull(),
+  description: t.text(),
+  time: t.time(),
+  notes: t.text(),
+  createdAt: t
+    .timestamp()
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: t
+    .timestamp()
+    .$defaultFn(() => new Date())
+    .notNull(),
+}));
 
 // Trip stops - cities added to specific trips with order and dates
 export const tripStops = pgTable(

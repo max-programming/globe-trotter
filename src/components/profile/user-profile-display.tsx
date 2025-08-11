@@ -48,8 +48,8 @@ export function UserProfileDisplay() {
     day: "numeric",
   });
 
-  const country = countries.find(c => c.id === currentUser.countryId);
-  const city = cities.find(c => c.id === currentUser.cityId);
+  const country = countries.find((c) => c.id === currentUser.countryId);
+  const city = cities.find((c) => c.id === currentUser.cityId);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">

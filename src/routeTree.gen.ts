@@ -19,6 +19,7 @@ import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
+import { Route as protectedTripsActivitiesTripIdRouteImport } from './routes/(protected)/trips/activities/$tripId'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
 const rootServerRouteImport = createServerRootRoute()
@@ -62,6 +63,12 @@ const protectedSettingsProfileRoute =
     path: '/settings/profile',
     getParentRoute: () => protectedRouteRoute,
   } as any)
+const protectedTripsActivitiesTripIdRoute =
+  protectedTripsActivitiesTripIdRouteImport.update({
+    id: '/trips/activities/$tripId',
+    path: '/trips/activities/$tripId',
+    getParentRoute: () => protectedRouteRoute,
+  } as any)
 const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/new': typeof protectedTripsNewRoute
+  '/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof protectedIndexRoute
@@ -83,6 +91,7 @@ export interface FileRoutesByTo {
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/new': typeof protectedTripsNewRoute
+  '/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,6 +103,7 @@ export interface FileRoutesById {
   '/(protected)/': typeof protectedIndexRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
   '/(protected)/trips/new': typeof protectedTripsNewRoute
+  '/(protected)/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings/profile'
     | '/trips/new'
+    | '/trips/activities/$tripId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/settings/profile'
     | '/trips/new'
+    | '/trips/activities/$tripId'
   id:
     | '__root__'
     | '/(auth)'
@@ -122,6 +134,7 @@ export interface FileRouteTypes {
     | '/(protected)/'
     | '/(protected)/settings/profile'
     | '/(protected)/trips/new'
+    | '/(protected)/trips/activities/$tripId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof protectedSettingsProfileRouteImport
       parentRoute: typeof protectedRouteRoute
     }
+    '/(protected)/trips/activities/$tripId': {
+      id: '/(protected)/trips/activities/$tripId'
+      path: '/trips/activities/$tripId'
+      fullPath: '/trips/activities/$tripId'
+      preLoaderRoute: typeof protectedTripsActivitiesTripIdRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
   }
 }
 declare module '@tanstack/react-start/server' {
@@ -241,6 +261,7 @@ interface protectedRouteRouteChildren {
   protectedIndexRoute: typeof protectedIndexRoute
   protectedSettingsProfileRoute: typeof protectedSettingsProfileRoute
   protectedTripsNewRoute: typeof protectedTripsNewRoute
+  protectedTripsActivitiesTripIdRoute: typeof protectedTripsActivitiesTripIdRoute
 }
 
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
@@ -248,6 +269,7 @@ const protectedRouteRouteChildren: protectedRouteRouteChildren = {
   protectedIndexRoute: protectedIndexRoute,
   protectedSettingsProfileRoute: protectedSettingsProfileRoute,
   protectedTripsNewRoute: protectedTripsNewRoute,
+  protectedTripsActivitiesTripIdRoute: protectedTripsActivitiesTripIdRoute,
 }
 
 const protectedRouteRouteWithChildren = protectedRouteRoute._addFileChildren(

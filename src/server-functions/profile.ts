@@ -52,11 +52,7 @@ export const getCurrentUser = createServerFn({ method: "GET" }).handler(
       where: eq(users.id, session.user.id),
       with: {
         country: true,
-        city: {
-          with: {
-            country: true,
-          },
-        },
+        city: true,
       },
     });
 
