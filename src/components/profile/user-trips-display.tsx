@@ -221,8 +221,14 @@ export function UserTripsDisplay() {
 
               {/* Action Button */}
               <div className="pt-2 mt-auto">
-                <Button className="w-full cursor-pointer" variant="outline">
-                  View Trip
+                <Button
+                  asChild
+                  className="w-full cursor-pointer"
+                  variant="outline"
+                >
+                  <Link to="/trips/$tripId" params={{ tripId: trip.id }}>
+                    View Trip
+                  </Link>
                 </Button>
               </div>
             </CardContent>

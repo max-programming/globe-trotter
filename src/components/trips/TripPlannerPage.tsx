@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Loader2,
   X,
+  Pencil,
+  ArrowBigRight,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -46,6 +48,8 @@ import { upsertPlace } from "~/server-functions/trip";
 import { Heading } from "../generic/heading";
 import { TripMap } from "../maps/TripMap";
 import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
+import { cn } from "~/lib/utils";
+import { tr } from "zod/v4/locales";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -391,67 +395,58 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen ">
+      <div className="pl-10">
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
           {/* Left Side - Trip Itinerary */}
           <div className="xl:col-span-3 flex flex-col space-y-4">
             {/* Trip Header */}
-            <div className="relative overflow-hidden rounded-xl">
+            <div className="relative overflow-hidden">
               {/* Cover Image Background */}
-              <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700">
+              <div className="relative h-64 bg-transparent">
                 {trip.destinationImageUrl && (
-                  <>
+                  <div className="rounded-xl overflow-hidden">
                     <img
                       src={trip.destinationImageUrl}
                       alt={trip.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover rounded-xl overflow-hidden"
                     />
-                    <div className="absolute inset-0 bg-black/40" />
-                  </>
+                    <div className="absolute inset-0 bg-black/40 rounded-xl overflow-hidden" />
+                  </div>
                 )}
 
                 {/* Content Overlay */}
-                <div className="relative z-10 h-full flex flex-col justify-end">
-                  <div className="p-6 space-y-3">
-                    {/* Trip Title and Location */}
-                    <div className="space-y-2">
-                      <Heading className="text-2xl font-bold text-white drop-shadow-lg">
-                        {trip.name}
-                      </Heading>
-                      {trip.destinationName && (
-                        <div className="flex items-center space-x-2 text-white/90">
-                          <MapPin className="w-4 h-4" />
-                          <span className="text-sm font-medium drop-shadow">
-                            {trip.destinationName}
-                          </span>
-                        </div>
-                      )}
-                      {trip.startDate && trip.endDate && (
-                        <div className="flex items-center space-x-2 text-white/90">
-                          <Calendar className="w-4 h-4" />
-                          <span className="text-sm drop-shadow">
-                            {format(new Date(trip.startDate), "MMM d")} -{" "}
-                            {format(new Date(trip.endDate), "MMM d, yyyy")}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                <div className="z-10 h-full flex flex-col justify-end rounded-xl overflow-hidden">
+                  {/* <div className="p-6 space-y-3"> */}
+                  {/* Trip Title and Location */}
+                  <div className="space-y-2 bg-white max-w-2/4 w-full py-4 p-10 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 -bottom-1/2 -translate-y-1/2 ">
+                    <Heading className="text-2xl font-bold text-white drop-shadow-lg">
+                      {trip.name}
+                    </Heading>
+                    {trip.destinationName && (
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm font-medium drop-shadow">
+                          {trip.destinationName}
+                        </span>
+                      </div>
+                    )}
+                    {trip.startDate && trip.endDate && (
+                      <div className="flex items-center space-x-2 ">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm drop-shadow">
+                          {format(new Date(trip.startDate), "MMM d")} -{" "}
+                          {format(new Date(trip.endDate), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                    )}
                   </div>
+                  {/* </div> */}
                 </div>
               </div>
 
-              {/* Trip Description */}
-              {trip.description && (
-                <div className="p-4 bg-background/95 border-b">
-                  <p className="text-sm text-muted-foreground">
-                    {trip.description}
-                  </p>
-                </div>
-              )}
-
               {/* Trip Notes Section */}
-              <div className="p-4 bg-background/95">
+              <div className="p-4 bg-background/95 pt-16">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium flex items-center space-x-2">
@@ -465,7 +460,17 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                         onClick={() => setIsEditingNotes(true)}
                         className="text-xs"
                       >
-                        {tripNotes ? "Edit" : "Add Notes"}
+                        {tripNotes ? (
+                          <>
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Add Notes
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -508,7 +513,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                     <div className="min-h-8">
                       {tripNotes ? (
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {tripNotes}
+                          ➤ {tripNotes}
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground/60 italic">
@@ -569,11 +574,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                   const showSuggestions = dayShowSuggestions[day.id] || false;
 
                   return (
-                    <Card key={day.id} className="bg-card/95 backdrop-blur-sm">
+                    <Card
+                      key={day.id}
+                      className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                    >
                       <CardContent className="p-0">
                         {/* Accordion Header */}
                         <button
-                          className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="w-full p-4 flex items-center justify-between"
                           onClick={() => toggleDayExpansion(day.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`day-content-${day.id}`}
@@ -850,7 +858,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
           </div>
 
           {/* Right Side - Google Maps */}
-          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] self-start">
+          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-5rem)] self-start">
             <div className="h-full flex flex-col">
               <div className="p-4 border-b">
                 <h3 className="font-semibold flex items-center space-x-2">
@@ -888,7 +896,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 function TripPlannerSkeleton() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
+      <div className="pl-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-6rem)]">
           {/* Left Side Skeleton */}
           <div className="space-y-6">
