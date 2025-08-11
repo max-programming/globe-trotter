@@ -31,7 +31,7 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "TanStack Start Starter",
+        title: "Globe Trotter",
       },
     ],
     links: [
