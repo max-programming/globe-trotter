@@ -290,7 +290,7 @@ const NewTripForm = () => {
                             placeholder="Search for a city or country..."
                             className="h-14 pl-12 pr-4 text-lg transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={field.value}
-                            onChange={e =>
+                            onChange={(e) =>
                               handleDestinationChange(e.target.value)
                             }
                             onFocus={() => setShowSuggestions(true)}
@@ -309,7 +309,7 @@ const NewTripForm = () => {
                               <span>Searching...</span>
                             </div>
                           ) : placeSuggestions.length > 0 ? (
-                            placeSuggestions.map(place => (
+                            placeSuggestions.map((place) => (
                               <button
                                 key={place.place_id}
                                 type="button"
@@ -384,7 +384,7 @@ const NewTripForm = () => {
                         onSelect={handleDateRangeSelect}
                         captionLayout="dropdown"
                         numberOfMonths={2}
-                        disabled={date => date < new Date()}
+                        disabled={(date) => date < new Date()}
                       />
                     </PopoverContent>
                   </Popover>
