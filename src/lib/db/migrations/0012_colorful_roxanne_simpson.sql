@@ -1,0 +1,1 @@
+ALTER TABLE "recommended_trip_activities" ALTER COLUMN "category" SET DATA TYPE text;

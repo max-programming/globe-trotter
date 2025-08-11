@@ -21,12 +21,12 @@ function OauthOptions() {
       >
         {isPending ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
             <span className="font-medium">Signing in...</span>
           </>
         ) : (
           <>
-            <SiGoogle className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+            <SiGoogle className="h-4 w-4 group-hover:scale-110 transition-transform" />
             <span className="font-medium">Continue with Google</span>
           </>
         )}
