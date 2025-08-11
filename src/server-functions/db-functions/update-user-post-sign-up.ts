@@ -6,7 +6,7 @@ export async function updateUserPostSignUp(
   userId: string,
   signUpData: SignUpFormData
 ) {
-  const { phone, cityId, countryId, additionalInfo } = signUpData;
+  const { phone, cityId, countryId, additionalInfo, image } = signUpData;
 
   await db
     .update(users)
@@ -15,6 +15,7 @@ export async function updateUserPostSignUp(
       cityId,
       countryId,
       additionalInfo,
+      image,
     })
     .where(eq(users.id, userId));
 }

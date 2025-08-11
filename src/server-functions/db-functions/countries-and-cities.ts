@@ -1,13 +1,11 @@
 import { db } from "~/lib/db";
 import { eq } from "drizzle-orm";
-import { cities } from "~/lib/db/schema";
+import { cities, countries } from "~/lib/db/schema";
 
 export async function getAllCountries() {
-  return db.query.countries.findMany();
+  return db.select().from(countries);
 }
 
 export async function getCountryCities(countryId: number) {
-  return db.query.cities.findMany({
-    where: eq(cities.countryId, countryId),
-  });
+  return db.select().from(cities).where(eq(cities.countryId, countryId));
 }

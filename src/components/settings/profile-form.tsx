@@ -49,9 +49,9 @@ import {
   getCountriesQuery,
   getCitiesByCountryQuery,
 } from "~/lib/queries/countries-and-cities";
+import { useImageUpload } from "~/lib/hooks/use-image-upload";
 
 export function ProfileForm() {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
 
@@ -72,6 +72,18 @@ export function ProfileForm() {
   });
 
   const updateProfileMutation = useUpdateProfile(form);
+
+  const imageUpload = useImageUpload({
+    onSuccess: result => {
+      form.setValue("image", result.imageUrl);
+    },
+    onError: error => {
+      form.setError("root", {
+        type: "manual",
+        message: `Image upload failed: ${error}`,
+      });
+    },
+  });
 
   // Fetch countries using TanStack Query
   const { data: countries = [] } = useQuery(getCountriesQuery);
@@ -94,27 +106,18 @@ export function ProfileForm() {
         additionalInfo: currentUser.additionalInfo || "",
         image: currentUser.image || "",
       });
-      setProfileImage(currentUser.image || null);
+      if (currentUser.image) {
+        imageUpload.setPreviewUrl(currentUser.image);
+      }
     }
-  }, [currentUser, form]);
+  }, [currentUser]);
 
   function handleSubmit(data: ProfileUpdateFormData) {
     const submitData = {
       ...data,
-      image: profileImage || data.image || "",
+      image: imageUpload.uploadedImageUrl || data.image || "",
     };
     updateProfileMutation.mutate(submitData);
-  }
-
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        setProfileImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
   }
 
   return (
@@ -143,7 +146,7 @@ export function ProfileForm() {
               <div className="relative">
                 <Avatar className="w-24 h-24 border-4 border-white shadow-xl">
                   <AvatarImage
-                    src={profileImage || currentUser?.image || ""}
+                    src={imageUpload.previewUrl || currentUser?.image || ""}
                     className="object-cover"
                   />
                   <AvatarFallback className="bg-gradient-to-br from-primary-100 to-primary-200 text-primary-700">
@@ -152,7 +155,11 @@ export function ProfileForm() {
                 </Avatar>
                 <label
                   htmlFor="profile-image"
-                  className="absolute -bottom-2 -right-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full p-2 cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                  className={cn(
+                    "absolute -bottom-2 -right-2 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full p-2 cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105",
+                    imageUpload.isUploading &&
+                      "animate-pulse opacity-70 cursor-not-allowed"
+                  )}
                 >
                   <Camera className="w-4 h-4" />
                 </label>
@@ -160,9 +167,19 @@ export function ProfileForm() {
                   id="profile-image"
                   type="file"
                   accept="image/*"
-                  onChange={handleImageChange}
+                  onChange={imageUpload.handleFileSelect}
                   className="hidden"
+                  disabled={
+                    imageUpload.isUploading || updateProfileMutation.isPending
+                  }
                 />
+                {imageUpload.isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                    <div className="text-xs text-white font-medium">
+                      Uploading...
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
