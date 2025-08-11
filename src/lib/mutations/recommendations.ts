@@ -72,25 +72,30 @@ export function useDismissRecommendation() {
   });
 }
 
-export function useConvertRecommendationToTrip() {
+export function useConvertRecommendationToTrip(callbacks?: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const convertFn = useServerFn(convertRecommendationToTrip);
 
   return useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       recommendationId: string;
       startDate: Date;
       endDate: Date;
       visibility: "private" | "public";
-    }) => convertFn({ data }),
-    onSuccess: trip => {
-      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-      queryClient.invalidateQueries({ queryKey: ["trips"] });
-      navigate({ to: `/trips/${trip.id}` });
+    }) => await convertFn({ data }),
+    onSuccess: async trip => {
+      await queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+      await queryClient.invalidateQueries({ queryKey: ["trips"] });
+      callbacks?.onSuccess?.();
+      await navigate({ to: `/trips/$tripId`, params: { tripId: trip.id } });
     },
     onError: error => {
       console.error("Failed to convert recommendation to trip:", error);
+      callbacks?.onError?.(error);
     },
   });
 }

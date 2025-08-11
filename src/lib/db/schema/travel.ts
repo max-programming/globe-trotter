@@ -478,3 +478,5 @@ export const recommendedTripActivities = pgTable(
     ),
   })
 );
+
+export type Place = typeof places.$inferSelect;

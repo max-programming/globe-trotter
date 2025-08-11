@@ -109,7 +109,15 @@ export function RecommendationDetailPage({
     getRecommendationQuery(recommendationId)
   );
   const markViewedMutation = useMarkRecommendationViewed();
-  const convertMutation = useConvertRecommendationToTrip();
+  const convertMutation = useConvertRecommendationToTrip({
+    onSuccess: () => {
+      // Dialog will close when navigation happens
+      setShowCreateDialog(false);
+    },
+    onError: () => {
+      // Keep dialog open on error so user can retry
+    },
+  });
 
   const form = useForm<CreateTripFormData>({
     resolver: zodResolver(createTripSchema),
@@ -168,7 +176,7 @@ export function RecommendationDetailPage({
       endDate: data.endDate,
       visibility: data.visibility,
     });
-    setShowCreateDialog(false);
+    // Don't close dialog here - let the mutation handle success/error states
   };
 
   const handleDateRangeSelect = (range: DateRange | undefined) => {

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from "@react-google-maps/api";
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Marker,
+  InfoWindow,
+} from "@react-google-maps/api";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Star, Clock, Navigation } from "lucide-react";
@@ -7,6 +12,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { getGoogleMapsApiKey } from "~/server-functions/config";
+import type { Place } from "~/lib/db";
 
 const mapContainerStyle = {
   width: "100%",
@@ -52,19 +58,20 @@ interface TripMapProps {
   itineraryPlaces?: Array<{
     id: number;
     placeId: string;
-    placeDetails?: {
-      name: string;
-      formattedAddress: string;
-      latitude?: number;
-      longitude?: number;
-    };
+    place?: Place;
   }>;
   onPlaceSelect?: (place: PlaceMarker) => void;
   center?: google.maps.LatLngLiteral;
 }
 
 // Internal component that only renders when API key is available
-function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceSelect, center }: TripMapProps & { apiKey: string }) {
+function TripMapInternal({
+  apiKey,
+  selectedPlace,
+  itineraryPlaces = [],
+  onPlaceSelect,
+  center,
+}: TripMapProps & { apiKey: string }) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: apiKey,
@@ -75,7 +82,9 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
 
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [markers, setMarkers] = useState<PlaceMarker[]>([]);
-  const [selectedMarker, setSelectedMarker] = useState<PlaceMarker | null>(null);
+  const [selectedMarker, setSelectedMarker] = useState<PlaceMarker | null>(
+    null
+  );
   const [mapCenter, setMapCenter] = useState(center || defaultCenter);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
@@ -90,47 +99,53 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
   }, []);
 
   // Fetch place details and location from Google Places API
-  const fetchPlaceDetails = useCallback(async (placeId: string, type: "search" | "itinerary") => {
-    if (!placesService.current) return null;
+  const fetchPlaceDetails = useCallback(
+    async (placeId: string, type: "search" | "itinerary") => {
+      if (!placesService.current) return null;
 
-    return new Promise<PlaceMarker | null>((resolve) => {
-      const request = {
-        placeId: placeId,
-        fields: [
-          "place_id", 
-          "name", 
-          "geometry", 
-          "formatted_address", 
-          "types", 
-          "rating", 
-          "photos"
-        ]
-      };
+      return new Promise<PlaceMarker | null>(resolve => {
+        const request = {
+          placeId: placeId,
+          fields: [
+            "place_id",
+            "name",
+            "geometry",
+            "formatted_address",
+            "types",
+            "rating",
+            "photos",
+          ],
+        };
 
-      placesService.current!.getDetails(request, (place, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
-          const marker: PlaceMarker = {
-            placeId: place.place_id!,
-            name: place.name || "Unknown Place",
-            position: {
-              lat: place.geometry.location.lat(),
-              lng: place.geometry.location.lng(),
-            },
-            type,
-            details: {
-              description: place.formatted_address,
-              types: place.types || [],
-              rating: place.rating,
-              photoReference: place.photos?.[0]?.getUrl({ maxWidth: 400 }),
-            },
-          };
-          resolve(marker);
-        } else {
-          resolve(null);
-        }
+        placesService.current!.getDetails(request, (place, status) => {
+          if (
+            status === google.maps.places.PlacesServiceStatus.OK &&
+            place?.geometry?.location
+          ) {
+            const marker: PlaceMarker = {
+              placeId: place.place_id!,
+              name: place.name || "Unknown Place",
+              position: {
+                lat: place.geometry.location.lat(),
+                lng: place.geometry.location.lng(),
+              },
+              type,
+              details: {
+                description: place.formatted_address,
+                types: place.types || [],
+                rating: place.rating,
+                photoReference: place.photos?.[0]?.getUrl({ maxWidth: 400 }),
+              },
+            };
+            resolve(marker);
+          } else {
+            resolve(null);
+          }
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
 
   // Handle selected place from search
   useEffect(() => {
@@ -144,7 +159,7 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
           const filtered = prev.filter(m => m.type !== "search");
           return [...filtered, marker];
         });
-        
+
         // Center map on the selected place
         setMapCenter(marker.position);
         if (map) {
@@ -165,18 +180,18 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
       const itineraryMarkers: PlaceMarker[] = [];
 
       for (const place of itineraryPlaces) {
-        if (place.placeDetails?.latitude && place.placeDetails?.longitude) {
+        if (place.place?.latitude && place.place?.longitude) {
           // Use existing coordinates if available
           const marker: PlaceMarker = {
             placeId: place.placeId,
-            name: place.placeDetails.name,
+            name: place.place.name,
             position: {
-              lat: place.placeDetails.latitude,
-              lng: place.placeDetails.longitude,
+              lat: place.place.latitude,
+              lng: place.place.longitude,
             },
             type: "itinerary",
             details: {
-              description: place.placeDetails.formattedAddress,
+              description: place.place.formattedAddress,
             },
           };
           itineraryMarkers.push(marker);
@@ -244,7 +259,7 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
       onUnmount={onUnmount}
       options={mapOptions}
     >
-      {markers.map((marker) => (
+      {markers.map(marker => (
         <Marker
           key={`${marker.placeId}-${marker.type}`}
           position={marker.position}
@@ -252,7 +267,9 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
           icon={
             marker.type === "search"
               ? {
-                  url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+                  url:
+                    "data:image/svg+xml;charset=UTF-8," +
+                    encodeURIComponent(`
                     <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="16" cy="16" r="12" fill="#dc2626" stroke="white" stroke-width="2"/>
                       <path d="M16 8l3 6h-6l3-6z" fill="white"/>
@@ -262,7 +279,9 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
                   scaledSize: new window.google.maps.Size(32, 32),
                 }
               : {
-                  url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`
+                  url:
+                    "data:image/svg+xml;charset=UTF-8," +
+                    encodeURIComponent(`
                     <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <circle cx="12" cy="12" r="10" fill="#2563eb" stroke="white" stroke-width="2"/>
                       <circle cx="12" cy="12" r="4" fill="white"/>
@@ -282,12 +301,19 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
           <div className="p-2 max-w-xs">
             <div className="space-y-2">
               <div className="flex items-start justify-between">
-                <h4 className="font-semibold text-sm pr-2">{selectedMarker.name}</h4>
-                <Badge variant={selectedMarker.type === "search" ? "destructive" : "default"} className="text-xs">
+                <h4 className="font-semibold text-sm pr-2">
+                  {selectedMarker.name}
+                </h4>
+                <Badge
+                  variant={
+                    selectedMarker.type === "search" ? "destructive" : "default"
+                  }
+                  className="text-xs"
+                >
                   {selectedMarker.type === "search" ? "Search" : "Planned"}
                 </Badge>
               </div>
-              
+
               {selectedMarker.details?.description && (
                 <p className="text-xs text-gray-600">
                   {selectedMarker.details.description}
@@ -297,19 +323,21 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
               {selectedMarker.details?.rating && (
                 <div className="flex items-center space-x-1">
                   <Star className="w-3 h-3 text-yellow-500 fill-current" />
-                  <span className="text-xs">{selectedMarker.details.rating}</span>
+                  <span className="text-xs">
+                    {selectedMarker.details.rating}
+                  </span>
                 </div>
               )}
 
               <div className="flex space-x-1 pt-1">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="text-xs h-6 px-2"
                   onClick={() => {
                     window.open(
                       `https://www.google.com/maps/dir/?api=1&destination=${selectedMarker.position.lat},${selectedMarker.position.lng}`,
-                      '_blank'
+                      "_blank"
                     );
                   }}
                 >
@@ -326,9 +354,18 @@ function TripMapInternal({ apiKey, selectedPlace, itineraryPlaces = [], onPlaceS
 }
 
 // Main component that handles API key loading
-export function TripMap({ selectedPlace, itineraryPlaces = [], onPlaceSelect, center }: TripMapProps) {
+export function TripMap({
+  selectedPlace,
+  itineraryPlaces = [],
+  onPlaceSelect,
+  center,
+}: TripMapProps) {
   const getApiKeyFn = useServerFn(getGoogleMapsApiKey);
-  const { data: apiKeyData, isLoading: isApiKeyLoading, error: apiKeyError } = useQuery({
+  const {
+    data: apiKeyData,
+    isLoading: isApiKeyLoading,
+    error: apiKeyError,
+  } = useQuery({
     queryKey: ["google-maps-api-key"],
     queryFn: () => getApiKeyFn(),
     staleTime: Infinity, // API key doesn't change
@@ -342,7 +379,8 @@ export function TripMap({ selectedPlace, itineraryPlaces = [], onPlaceSelect, ce
             <MapPin className="w-12 h-12 text-destructive mx-auto mb-4" />
             <h3 className="font-semibold mb-2">API Key Error</h3>
             <p className="text-sm text-muted-foreground">
-              Failed to get Google Maps API key. Please check your configuration.
+              Failed to get Google Maps API key. Please check your
+              configuration.
             </p>
           </CardContent>
         </Card>
@@ -363,7 +401,7 @@ export function TripMap({ selectedPlace, itineraryPlaces = [], onPlaceSelect, ce
 
   // Only render the internal component when we have the API key
   return (
-    <TripMapInternal 
+    <TripMapInternal
       apiKey={apiKeyData.apiKey}
       selectedPlace={selectedPlace}
       itineraryPlaces={itineraryPlaces}

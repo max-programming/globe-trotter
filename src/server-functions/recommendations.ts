@@ -9,6 +9,7 @@ import {
   recommendedTripActivities,
   places,
   tripItinerary,
+  tripPlaces,
 } from "~/lib/db/schema";
 import { eq, and, isNull, desc, sql } from "drizzle-orm";
 import {
@@ -396,7 +397,8 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
         })
         .returning();
 
-      // Generate daily itinerary entries
+      // Generate daily itinerary entries and convert activities to trip places
+      let createdItinerary: any[] = [];
       if (data.startDate && data.endDate) {
         const startDate = new Date(data.startDate);
         const endDate = new Date(data.endDate);
@@ -415,7 +417,131 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
 
         // Insert all itinerary entries
         if (itineraryEntries.length > 0) {
-          await db.insert(tripItinerary).values(itineraryEntries);
+          createdItinerary = await db
+            .insert(tripItinerary)
+            .values(itineraryEntries)
+            .returning();
+        }
+      }
+
+      // Convert recommendation activities to trip places
+      if (
+        recommendation.activities &&
+        recommendation.activities.length > 0 &&
+        createdItinerary.length > 0
+      ) {
+        // Group activities by day
+        const activitiesByDay: { [key: number]: any[] } = {};
+        recommendation.activities.forEach(activity => {
+          const day = activity.suggestedDay || 1;
+          if (!activitiesByDay[day]) {
+            activitiesByDay[day] = [];
+          }
+          activitiesByDay[day].push(activity);
+        });
+
+        // Process each day's activities
+        for (const [dayNumber, dayActivities] of Object.entries(
+          activitiesByDay
+        )) {
+          const dayIndex = parseInt(dayNumber) - 1; // Convert to 0-based index
+          const itineraryEntry = createdItinerary[dayIndex];
+
+          if (!itineraryEntry) continue; // Skip if no itinerary entry for this day
+
+          // Process activities for this day
+          for (let i = 0; i < dayActivities.length; i++) {
+            const activity = dayActivities[i];
+            let activityPlaceId = null;
+
+            // Try to find or create a place for this activity
+            if (activity.placeName) {
+              try {
+                // First, try to find existing place by name (fuzzy search)
+                let existingActivityPlace = await db.query.places.findFirst({
+                  where: sql`LOWER(${places.name}) LIKE LOWER(${`%${activity.placeName}%`})`,
+                });
+
+                if (!existingActivityPlace) {
+                  // Try to get place details from Google Places
+                  const placeSearchResult = await searchAndGetPlaceDetails({
+                    data: { query: activity.placeName },
+                  });
+
+                  if (
+                    placeSearchResult.success &&
+                    placeSearchResult.placeData
+                  ) {
+                    const placeData = placeSearchResult.placeData;
+
+                    // Create new place record
+                    [existingActivityPlace] = await db
+                      .insert(places)
+                      .values({
+                        placeId: placeData.placeId,
+                        name: placeData.name,
+                        formattedAddress: placeData.formattedAddress,
+                        mainText: placeData.mainText,
+                        secondaryText: placeData.secondaryText || null,
+                        placeTypes: placeData.placeTypes,
+                        latitude: placeData.latitude,
+                        longitude: placeData.longitude,
+                        countryCode: placeData.countryCode,
+                        countryName: placeData.countryName,
+                        administrativeLevels: placeData.administrativeLevels,
+                        timezone: placeData.timezone,
+                        photoReference: placeData.photoReference,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                      })
+                      .returning();
+                  }
+                }
+
+                activityPlaceId = existingActivityPlace?.placeId || null;
+              } catch (error) {
+                console.warn(
+                  `Failed to create place for activity "${activity.name}":`,
+                  error
+                );
+                // Continue without place - activity can still be added as trip place
+              }
+            }
+
+            // Create trip place entry (even without a specific place)
+            try {
+              const tripPlaceData = {
+                tripItineraryId: itineraryEntry.id,
+                sortOrder: i * 100, // Space activities 100 apart for easy reordering
+                scheduledTime: null, // Could be set based on activity time if available
+                userNotes: `${activity.name}${activity.description ? ` - ${activity.description}` : ""}`,
+                isVisited: false,
+                userRating: null,
+                visitDuration: activity.estimatedDuration || null,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              };
+
+              // Only add placeId if we have one (required field)
+              const placeIdToUse = activityPlaceId || finalPlaceId;
+              if (placeIdToUse) {
+                await db.insert(tripPlaces).values({
+                  ...tripPlaceData,
+                  placeId: placeIdToUse,
+                });
+              } else {
+                console.warn(
+                  `Skipping activity "${activity.name}" - no valid place ID found`
+                );
+              }
+            } catch (error) {
+              console.warn(
+                `Failed to create trip place for activity "${activity.name}":`,
+                error
+              );
+              // Continue with other activities even if one fails
+            }
+          }
         }
       }
 
