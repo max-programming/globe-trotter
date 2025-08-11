@@ -28,13 +28,32 @@ import {
 } from "../ui/dropdown-menu";
 import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
 import { ShareTripDialog } from "../trips/ShareTripDialog";
+import { useDeleteTrip } from "~/lib/mutations/trips/useDeleteTrip";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const shareTrip = useShareTrip();
+
+  const deleteTrip = useDeleteTrip();
+
+  const handleDeleteClick = (trip: any) => {
+    setTripToDelete({ id: trip.id, name: trip.name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
+    await deleteTrip.mutateAsync({ tripId: tripToDelete.id });
+  };
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -195,15 +214,12 @@ export function UserTripsDisplay() {
                     )}
                     Share Trip
                   </DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" asChild>
-                    <Link
-                      to="/trips/$tripId"
-                      params={{ tripId: trip.id }}
-                      className="cursor-pointer"
-                    >
-                      <Trash className="h-4 w-4" />
-                      Delete Trip
-                    </Link>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => handleDeleteClick(trip)}
+                  >
+                    <Trash className="h-4 w-4" />
+                    Delete Trip
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -287,6 +303,25 @@ export function UserTripsDisplay() {
         isOpen={isShareDialogOpen}
         onOpenChange={setIsShareDialogOpen}
         shareUrl={shareUrl}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Trip"
+        description={
+          <span>
+            Are you sure you want to delete{" "}
+            <strong>"{tripToDelete?.name}"</strong>? This action cannot be
+            undone and will permanently remove your trip and all its details.
+          </span>
+        }
+        confirmText="Delete Trip"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleteTrip.isPending}
+        onConfirm={handleConfirmDelete}
       />
     </div>
   );
