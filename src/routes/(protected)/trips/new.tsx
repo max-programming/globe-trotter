@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -40,6 +40,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle as AlertCircleIcon } from "lucide-react";
 import { useCreateTrip } from "~/lib/mutations/trips/useCreateTrip";
+import { useImageUpload } from "~/lib/hooks/use-image-upload";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -68,13 +69,28 @@ function RouteComponent() {
 
 const CreateTripForm = () => {
   const [countryOpen, setCountryOpen] = useState(false);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: countries = [] } = useQuery(getCountriesQuery);
 
+  const {
+    isUploading: isUploadingImage,
+    previewUrl: coverPreview,
+    uploadedImageUrl,
+    uploadImage,
+    resetUpload,
+    setPreviewUrl,
+  } = useImageUpload({
+    onError: (error) => {
+      console.error("Image upload failed:", error);
+    },
+  });
+
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
   const form = useForm<CreateTripFormData>({
     resolver: zodResolver(createTripSchema),
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     defaultValues: {
       name: "",
       startDate: undefined as unknown as Date,
@@ -88,8 +104,71 @@ const CreateTripForm = () => {
   const { mutateAsync: createTrip, isPending: isCreatingTrip } =
     useCreateTrip(form);
 
+  const handleFile = (file: File | null) => {
+    setCoverFile(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setPreviewUrl(String(ev.target?.result || ""));
+      reader.readAsDataURL(file);
+    } else {
+      // Clear preview and uploaded state and reset the hidden input
+      resetUpload();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const handleSubmit = async (data: CreateTripFormData) => {
-    await createTrip(data);
+    // Final guard to avoid invalid ranges
+    if (data.startDate && data.endDate && data.endDate < data.startDate) {
+      form.setError("endDate" as any, {
+        type: "manual",
+        message: "End date cannot be before start date",
+      });
+      return;
+    }
+
+    let imageUrl = uploadedImageUrl || data.coverImageUrl;
+    if (!imageUrl && coverFile) {
+      const result = await uploadImage(coverFile);
+      imageUrl = result?.imageUrl || undefined;
+    }
+
+    const tripData = { ...data, coverImageUrl: imageUrl };
+    await createTrip(tripData);
+  };
+
+  const handleStartDateChange = (d?: Date) => {
+    form.setValue("startDate" as any, d as any, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+    const end = form.getValues("endDate" as any) as unknown as Date | undefined;
+    if (d && end && end < d) {
+      form.setValue("endDate" as any, d as any, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+    }
+  };
+
+  const handleEndDateChange = (d?: Date) => {
+    const start = form.getValues("startDate" as any) as unknown as
+      | Date
+      | undefined;
+    if (start && d && d < start) {
+      // Snap to start if invalid
+      form.setValue("endDate" as any, start as any, {
+        shouldDirty: true,
+        shouldValidate: false,
+      });
+      return;
+    }
+    form.setValue("endDate" as any, d as any, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
   };
 
   return (
@@ -160,15 +239,7 @@ const CreateTripForm = () => {
                       onDrop={(e) => {
                         e.preventDefault();
                         const file = e.dataTransfer.files?.[0] ?? null;
-                        setCoverFile(file);
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (ev) =>
-                            setCoverPreview(String(ev.target?.result || ""));
-                          reader.readAsDataURL(file);
-                        } else {
-                          setCoverPreview(null);
-                        }
+                        handleFile(file);
                       }}
                       className="group relative w-full h-44 rounded-md border border-dashed border-input/70 hover:border-primary/60 transition-colors flex items-center justify-center overflow-hidden"
                     >
@@ -189,8 +260,7 @@ const CreateTripForm = () => {
                             aria-label="Remove image"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setCoverFile(null);
-                              setCoverPreview(null);
+                              handleFile(null);
                             }}
                             className="absolute top-2 right-2 inline-flex items-center justify-center rounded-full bg-background/80 hover:bg-background px-2 py-2 shadow border"
                           >
@@ -213,22 +283,18 @@ const CreateTripForm = () => {
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0] ?? null;
-                          setCoverFile(file);
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (ev) =>
-                              setCoverPreview(String(ev.target?.result || ""));
-                            reader.readAsDataURL(file);
-                          } else {
-                            setCoverPreview(null);
-                          }
+                          handleFile(file);
                         }}
                       />
                     </div>
-                    {coverFile && (
+                    {isUploadingImage && (
                       <div className="text-xs text-muted-foreground">
-                        Selected: {coverFile.name} (
-                        {Math.round(coverFile.size / 1024)} KB)
+                        Uploading image...
+                      </div>
+                    )}
+                    {uploadedImageUrl && !isUploadingImage && (
+                      <div className="text-xs text-muted-foreground">
+                        Image uploaded successfully
                       </div>
                     )}
                   </div>
@@ -261,51 +327,51 @@ const CreateTripForm = () => {
                     )}
                   />
                 </div>
+              </div>
 
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-md flex items-center justify-center">
-                    <Calendar className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground">
-                    Dates
-                  </h3>
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-md flex items-center justify-center">
+                  <Calendar className="w-3.5 h-3.5 text-white" />
                 </div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Dates
+                </h3>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            date={field.value}
-                            setDate={(d) => field.onChange(d)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={(d) => handleStartDateChange(d)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            date={field.value}
-                            setDate={(d) => field.onChange(d)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="endDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          date={field.value}
+                          setDate={(d) => handleEndDateChange(d)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="space-y-4">
@@ -395,7 +461,7 @@ const CreateTripForm = () => {
                 <Button
                   type="submit"
                   className="px-8 h-11 text-white font-semibold bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.01]"
-                  disabled={isCreatingTrip}
+                  disabled={isCreatingTrip || isUploadingImage}
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {isCreatingTrip ? "Saving..." : "Save Trip"}
@@ -434,7 +500,7 @@ const activitySeeds: Record<string, string[]> = {
   ],
 };
 
-const Suggestions = ({ countryId }: SuggestionsProps) => {
+const Suggestions = memo(({ countryId }: SuggestionsProps) => {
   const { data: countries = [] } = useQuery(getCountriesQuery);
 
   const selectedCountryName = countries.find((c) => c.id === countryId)?.name;
@@ -482,6 +548,6 @@ const Suggestions = ({ countryId }: SuggestionsProps) => {
       </Card>
     </div>
   );
-};
+});
 
 export default CreateTripForm;
