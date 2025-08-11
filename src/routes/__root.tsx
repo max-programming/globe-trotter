@@ -8,17 +8,13 @@ import {
 } from "@tanstack/react-router";
 import appCss from "~/styles/app.css?url";
 import { QueryClient } from "@tanstack/react-query";
-import { getSession } from "~/server-functions/auth";
+import { getSessionQuery } from "~/lib/queries/get-session-query";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   beforeLoad: async ({ context }) => {
-    const session = await context.queryClient.fetchQuery({
-      queryKey: ["session"],
-      queryFn: getSession,
-      staleTime: 1000 * 60 * 15,
-    });
+    const session = await context.queryClient.fetchQuery(getSessionQuery);
     return { auth: session };
   },
   head: () => ({
