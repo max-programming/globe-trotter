@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { SearchIcon, UploadIcon, ImageIcon, XIcon } from "lucide-react";
 import {
   Dialog,
@@ -12,22 +12,36 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 import { useDebounceValue } from "usehooks-ts";
+import { useQuery } from "@tanstack/react-query";
+import { getPexelsImagesQuery } from "~/lib/queries/pexels";
 
 interface UploadImageProps {
   className?: string;
   btnText?: string;
+  onImageSelect?: (image: ImageSelectionData) => void;
+}
+
+interface PexelsPhoto {
+  id: number;
+  url: string;
+  photographer?: string;
+}
+
+interface ImageSelectionData {
+  url: string;
+  source: "upload" | "pexels";
+  data?: PexelsPhoto;
 }
 
 const UploadImage = ({
   className,
   btnText = "Upload Image",
+  onImageSelect,
 }: UploadImageProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("upload");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery] = useDebounceValue(searchQuery, 500);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,48 +89,19 @@ const UploadImage = ({
     [handleFileUpload]
   );
 
-  const searchPexels = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
+  const handleImageSelection = useCallback(
+    (image: ImageSelectionData) => {
+      setIsOpen(false);
+      setUploadedImage(null);
+      setSearchQuery("");
+      onImageSelect?.(image);
+    },
+    [onImageSelect]
+  );
 
-    setIsSearching(true);
-    try {
-      const response = await fetch("/api/search-images", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, perPage: 20 }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSearchResults(data.photos || []);
-      }
-    } catch (error) {
-      console.error("Error searching images:", error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (debouncedQuery && activeTab === "search") {
-      searchPexels(debouncedQuery);
-    }
-  }, [debouncedQuery, activeTab, searchPexels]);
-
-  const handleImageSelection = (image: {
-    url: string;
-    source: "upload" | "pexels";
-    data?: any;
-  }) => {
-    setIsOpen(false);
-    setUploadedImage(null);
-    setSearchQuery("");
-    setSearchResults([]);
-  };
+  const { data: imageResult, isLoading: isLoadingImages } = useQuery(
+    getPexelsImagesQuery(debouncedQuery, 20)
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -132,7 +117,7 @@ const UploadImage = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-2 m-1">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <UploadIcon className="w-4 h-4" />
               Upload from PC
@@ -215,7 +200,7 @@ const UploadImage = ({
           </TabsContent>
 
           <TabsContent value="search" className="space-y-4">
-            <div className="relative">
+            <div className="relative m-1">
               <Input
                 placeholder="Search for images..."
                 value={searchQuery}
@@ -225,9 +210,9 @@ const UploadImage = ({
               <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
-              {isSearching ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="max-h-[32rem] overflow-y-auto">
+              {isLoadingImages ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div
                       key={i}
@@ -235,31 +220,25 @@ const UploadImage = ({
                     />
                   ))}
                 </div>
-              ) : searchResults.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {searchResults.map((image) => (
+              ) : imageResult?.success && imageResult?.photos?.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
+                  {imageResult.photos.map((image: PexelsPhoto) => (
                     <div
                       key={image.id}
                       className="group relative aspect-square cursor-pointer rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                       onClick={() =>
                         handleImageSelection({
-                          url: image.src.medium,
+                          url: image.url,
                           source: "pexels",
                           data: image,
                         })
                       }
                     >
                       <img
-                        src={image.src.medium}
-                        alt={`Photo by ${image.photographer}`}
+                        src={image.url}
+                        alt={`Photo by ${image.photographer || "img"}`}
                         className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all" />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                        <p className="text-white text-xs truncate">
-                          by {image.photographer}
-                        </p>
-                      </div>
                     </div>
                   ))}
                 </div>

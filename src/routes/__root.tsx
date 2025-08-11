@@ -9,6 +9,7 @@ import {
 import appCss from "~/styles/app.css?url";
 import { QueryClient } from "@tanstack/react-query";
 import { getSessionQuery } from "~/lib/queries/get-session-query";
+import UploadImage from "~/components/core/upload-image";
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
@@ -64,6 +65,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
           <div className="absolute top-0 -right-40 w-80 h-80 bg-primary-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000" />
           <div className="absolute -bottom-40 left-20 w-80 h-80 bg-primary-100/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" /> */}
           {/* <div className="absolute -bottom-40 left-20 w-80 h-80 bg-primary-100/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" /> */}
+          <UploadImage />
           {children}
         </div>
         <Scripts />
