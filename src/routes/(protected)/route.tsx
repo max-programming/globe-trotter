@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { Header } from "~/components/generic/header";
 
 export const Route = createFileRoute("/(protected)")({
   beforeLoad: ({ context }) => {
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/(protected)")({
 function ProtectedLayout() {
   return (
     <div>
+      <Header />
       <Outlet />
     </div>
   );
