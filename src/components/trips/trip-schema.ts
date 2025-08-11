@@ -13,6 +13,8 @@ export const createTripSchema = z
       main_text: z.string(),
       secondary_text: z.string().optional(),
       types: z.array(z.string()),
+      latitude: z.number(),
+      longitude: z.number(),
     }),
     // Optional image URL from Pexels
     imageUrl: z.string().url().optional(),

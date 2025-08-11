@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { format } from "date-fns";
@@ -16,6 +16,10 @@ import {
   X,
   Pencil,
   ArrowBigRight,
+  GripVertical,
+  Share,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -24,10 +28,20 @@ import { Textarea } from "~/components/ui/textarea";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog";
 import { getTripWithItineraryQuery } from "~/lib/queries/trips";
 import {
   useCreatePlace,
   useUpdatePlace,
+  useReorderTripPlaces,
 } from "~/lib/mutations/trips/usePlaces";
 import {
   DndContext,
@@ -50,6 +64,7 @@ import { TripMap } from "../maps/TripMap";
 import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
 import { cn } from "~/lib/utils";
 import { tr } from "zod/v4/locales";
+import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -64,6 +79,7 @@ interface TripPlannerPageProps {
 }
 
 export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
+  const queryClient = useQueryClient();
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
   const [daySearchQueries, setDaySearchQueries] = useState<
     Record<number, string>
@@ -82,6 +98,9 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const [isAddingPlace, setIsAddingPlace] = useState(false);
   const [tripNotes, setTripNotes] = useState("");
   const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
 
   // Refs for debouncing per day
   const searchTimeoutRefs = useRef<Record<number, NodeJS.Timeout>>({});
@@ -94,8 +113,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   );
   const createPlaceMutation = useCreatePlace();
   const updatePlaceMutation = useUpdatePlace();
+  const reorderPlacesMutation = useReorderTripPlaces();
   const upsertPlaceFn = useServerFn(upsertPlace);
   const updateTripNotesMutation = useUpdateTripNotes();
+  const shareTrip = useShareTrip();
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -112,13 +133,33 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     // Compute new order
     const reordered = arrayMove(day.places, oldIndex, newIndex);
 
-    // Persist each item's sortOrder to avoid duplicates
-    try {
-      await Promise.all(
-        reordered.map((p: any, idx: number) =>
-          updatePlaceMutation.mutateAsync({ tripPlaceId: p.id, sortOrder: idx })
-        )
+    // Optimistic UI update in cache (unit-100 ordering)
+    queryClient.setQueryData(["trips", tripId, "itinerary"], (prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      next.itinerary = prev.itinerary.map((d: any) =>
+        d.id === day.id
+          ? {
+              ...d,
+              places: reordered.map((p: any, idx: number) => ({
+                ...p,
+                sortOrder: (idx + 1) * 100,
+              })),
+            }
+          : d
       );
+      return next;
+    });
+
+    // Persist using a single bulk reorder API call
+    try {
+      await reorderPlacesMutation.mutateAsync({
+        tripItineraryId: day.id,
+        orders: reordered.map((p: any, idx: number) => ({
+          tripPlaceId: p.id,
+          sortOrder: (idx + 1) * 100,
+        })),
+      });
     } catch (e) {
       console.error("Failed to update order", e);
     }
@@ -153,9 +194,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
         <button
           type="button"
           onClick={onClick}
-          className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
-          aria-label={`View ${place.placeDetails?.name || place.name}`}
+          className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+          aria-label={`View ${place.place?.name || place.name}`}
         >
+          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
           <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
             {index + 1}
           </div>
@@ -360,6 +402,27 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     setIsEditingNotes(false);
   };
 
+  const handleShareTrip = async () => {
+    try {
+      const result = await shareTrip.mutateAsync({ tripId });
+      const shareUrl = `${window.location.origin}/view/${result.shareId}`;
+      setShareUrl(shareUrl);
+      setIsShareDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to share trip:", error);
+    }
+  };
+
+  const handleCopyShareUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy to clipboard:", error);
+    }
+  };
+
   if (isLoading) {
     return <TripPlannerSkeleton />;
   }
@@ -442,6 +505,21 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                     )}
                   </div>
                   {/* </div> */}
+                  <div className="absolute top-2 right-2 ">
+                    <Button
+                      onClick={handleShareTrip}
+                      disabled={shareTrip.isPending}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {shareTrip.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Share className="w-4 h-4" />
+                      )}
+                      Share
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -566,7 +644,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                   </CardContent>
                 </Card>
               ) : (
-                itinerary.map((day: any, index: number) => {
+                itinerary.map((day, index) => {
                   const isExpanded = expandedDays.has(day.id);
                   const daySearchQuery = daySearchQueries[day.id] || "";
                   const dayPlaces = dayPlaceSuggestions[day.id] || [];
@@ -746,76 +824,36 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                   <h4 className="font-medium text-sm">
                                     Planned Places
                                   </h4>
-                                  {day.places.map(
-                                    (place: any, placeIndex: number) => (
-                                      <div
-                                        key={place.id}
-                                        className="p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors"
-                                      >
-                                        <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
-                                          {placeIndex + 1}
-                                        </div>
-                                        <div className="flex-1">
-                                          <div className="flex items-center space-x-2">
-                                            <h5 className="font-medium text-sm">
-                                              {place.placeDetails?.name ||
-                                                place.name ||
-                                                "Unknown Place"}
-                                            </h5>
-                                            {place.scheduledTime && (
-                                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                                <Clock className="w-3 h-3" />
-                                                <span>
-                                                  {place.scheduledTime}
-                                                </span>
-                                              </div>
-                                            )}
-                                          </div>
-                                          {place.placeDetails
-                                            ?.formattedAddress && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {
-                                                place.placeDetails
-                                                  .formattedAddress
-                                              }
-                                            </p>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {place.userRating && (
-                                            <div className="flex items-center space-x-1">
-                                              <Star className="w-3 h-3 text-yellow-500" />
-                                              <span className="text-xs">
-                                                {place.userRating}
-                                              </span>
-                                            </div>
-                                          )}
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-7 w-7"
-                                            aria-label="View on map"
-                                            onClick={() => {
-                                              setSelectedPlace({
-                                                place_id: place.placeId,
-                                                main_text:
-                                                  place.placeDetails?.name ||
-                                                  place.name ||
-                                                  "",
-                                                description:
-                                                  place.placeDetails
-                                                    ?.formattedAddress || "",
-                                                secondary_text: "",
-                                                types: [],
-                                              });
-                                            }}
-                                          >
-                                            <MapPin className="w-4 h-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(e) => handleDragEnd(day, e)}
+                                  >
+                                    <SortableContext
+                                      items={day.places.map((p: any) => p.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      {day.places.map((place, placeIndex) => (
+                                        <SortablePlaceCard
+                                          key={place.id}
+                                          place={place}
+                                          index={placeIndex}
+                                          onClick={() =>
+                                            setSelectedPlace({
+                                              place_id: place.placeId,
+                                              main_text:
+                                                place.place?.name || "",
+                                              description:
+                                                place.place?.formattedAddress ||
+                                                "",
+                                              secondary_text: "",
+                                              types: [],
+                                            })
+                                          }
+                                        />
+                                      ))}
+                                    </SortableContext>
+                                  </DndContext>
                                 </div>
                               ) : (
                                 <div className="text-center py-4 text-muted-foreground">
@@ -876,9 +914,15 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(
-                    (day: any) => day.places || []
-                  )}
+                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
+                  center={
+                    trip.place
+                      ? {
+                          lat: trip.place.latitude || 0,
+                          lng: trip.place.longitude || 0,
+                        }
+                      : undefined
+                  }
                   onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
@@ -889,6 +933,56 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Share Dialog */}
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Trip</DialogTitle>
+            <DialogDescription>
+              Share your trip with others using this link. Anyone with the link
+              can view your trip.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                readOnly
+                value={shareUrl}
+                className="flex-1 bg-muted"
+                placeholder="Generating share URL..."
+              />
+              <Button
+                onClick={handleCopyShareUrl}
+                disabled={!shareUrl}
+                size="sm"
+                variant="outline"
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsShareDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

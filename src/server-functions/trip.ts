@@ -3,8 +3,15 @@ import { z } from "zod";
 import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
-import { trips, places, tripPlaces, tripItinerary } from "~/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  trips,
+  places,
+  tripPlaces,
+  tripItinerary,
+  sharedTrips,
+} from "~/lib/db/schema";
+import { eq, and, inArray, sql, asc } from "drizzle-orm";
+import { customAlphabet } from "nanoid";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -26,6 +33,8 @@ export const createTrip = createServerFn({ method: "POST" })
           mainText: data.place.main_text,
           secondaryText: data.place.secondary_text || null,
           placeTypes: data.place.types,
+          latitude: data.place.latitude,
+          longitude: data.place.longitude,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -74,65 +83,88 @@ export const createTrip = createServerFn({ method: "POST" })
     return newTrip;
   });
 
+// Bulk reorder places within a day using a single UPDATE statement
+export const reorderTripPlaces = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      tripItineraryId: z.number(),
+      orders: z
+        .array(
+          z.object({
+            tripPlaceId: z.number(),
+            sortOrder: z.number(),
+          })
+        )
+        .min(1),
+    })
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    // Verify ownership via itinerary -> trip
+    const it = await db
+      .select({ userId: trips.userId })
+      .from(tripItinerary)
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripItinerary.id, data.tripItineraryId))
+      .limit(1);
+
+    if (!it.length || it[0].userId !== context.user.id) {
+      throw new Error("Itinerary not found or access denied");
+    }
+
+    const ids = data.orders.map(o => o.tripPlaceId);
+
+    // Build CASE expression using query builder
+    const caseExpr = sql`CASE ${tripPlaces.id} ${sql.join(
+      data.orders.map(o => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
+      sql` `
+    )} ELSE ${tripPlaces.sortOrder} END`;
+
+    await db
+      .update(tripPlaces)
+      .set({ sortOrder: caseExpr, updatedAt: new Date() })
+      .where(
+        and(
+          eq(tripPlaces.tripItineraryId, data.tripItineraryId),
+          inArray(tripPlaces.id, ids)
+        )
+      );
+
+    return { success: true } as const;
+  });
+
 export const getTripWithItinerary = createServerFn({ method: "GET" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // First get the trip and verify ownership
-    const trip = await db
-      .select()
-      .from(trips)
-      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
-      .limit(1);
+    const trip = await db.query.trips.findFirst({
+      where: and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)),
+      with: {
+        place: true,
+        itinerary: {
+          orderBy: [asc(tripItinerary.date)],
+          with: {
+            places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    if (!trip.length) {
+    if (!trip) {
       throw new Error("Trip not found or access denied");
     }
 
-    // Get trip itinerary with places (now including place details from places table)
-    const itineraryData = await db
-      .select({
-        itinerary: tripItinerary,
-        tripPlace: tripPlaces,
-        place: places,
-      })
-      .from(tripItinerary)
-      .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
-      .leftJoin(places, eq(tripPlaces.placeId, places.placeId))
-      .where(eq(tripItinerary.tripId, data.tripId))
-      .orderBy(
-        tripItinerary.date,
-        tripPlaces.sortOrder,
-        tripPlaces.scheduledTime
-      );
-
-    // Group places by itinerary day
-    const itineraryWithPlaces = itineraryData.reduce(
-      (acc, row) => {
-        const itineraryId = row.itinerary.id;
-
-        if (!acc[itineraryId]) {
-          acc[itineraryId] = {
-            ...row.itinerary,
-            places: [],
-          };
-        }
-
-        if (row.tripPlace && row.place) {
-          acc[itineraryId].places.push({
-            ...row.tripPlace,
-            placeDetails: row.place,
-          });
-        }
-
-        return acc;
-      },
-      {} as Record<string, any>
-    );
-
     return {
-      trip: trip[0],
-      itinerary: Object.values(itineraryWithPlaces),
+      trip: trip,
+      itinerary: trip.itinerary,
     };
   });
 
@@ -210,13 +242,17 @@ export const createPlace = createServerFn({ method: "POST" })
       throw new Error("Place not found. Please search for the place first.");
     }
 
-    // Determine next sort order for the day
-    const existingForDay = await db
-      .select({ id: tripPlaces.id })
+    // Determine next sort order for the day using unit 100 increments
+    const existingOrders = await db
+      .select({ sortOrder: tripPlaces.sortOrder })
       .from(tripPlaces)
       .where(eq(tripPlaces.tripItineraryId, data.tripItineraryId));
 
-    const nextSort = existingForDay.length;
+    const currentMax = existingOrders.reduce(
+      (m, r) => (r.sortOrder && r.sortOrder > m ? r.sortOrder : m),
+      0
+    );
+    const nextSort = Number(currentMax) + 100;
 
     const [newTripPlace] = await db
       .insert(tripPlaces)
@@ -421,4 +457,93 @@ export const updateTripNotes = createServerFn({ method: "POST" })
       .returning();
 
     return updatedTrip;
+  });
+
+export const getTripWithItineraryByShareId = createServerFn({ method: "GET" })
+  .validator(z.object({ shareId: z.string() }))
+  .handler(async ({ data }) => {
+    // First, find the shared trip record to get the tripId
+    const sharedTrip = await db.query.sharedTrips.findFirst({
+      where: and(
+        eq(sharedTrips.shareToken, data.shareId),
+        eq(sharedTrips.isActive, true)
+      ),
+    });
+
+    console.log(sharedTrip);
+
+    if (!sharedTrip) {
+      throw new Error("Shared trip not found or no longer active");
+    }
+
+    // Then fetch the full trip data with itinerary (no auth check needed for public shares)
+    const trip = await db.query.trips.findFirst({
+      where: eq(trips.id, sharedTrip.tripId),
+      with: {
+        place: true,
+        itinerary: {
+          orderBy: [asc(tripItinerary.date)],
+          with: {
+            places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!trip) {
+      throw new Error("Trip not found");
+    }
+
+    // Increment view count for analytics
+    await db
+      .update(sharedTrips)
+      .set({
+        viewCount: sql`${sharedTrips.viewCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(sharedTrips.id, sharedTrip.id));
+
+    return {
+      trip: trip,
+      itinerary: trip.itinerary,
+      shareInfo: {
+        shareToken: sharedTrip.shareToken,
+        viewCount: (sharedTrip.viewCount || 0) + 1,
+        allowCopying: sharedTrip.allowCopying,
+      },
+    };
+  });
+
+export const createTripShare = createServerFn({ method: "POST" })
+  .validator(z.object({ tripId: z.string() }))
+  .middleware([authMiddleware])
+  .handler(async ({ data }) => {
+    // Check if the share already exists
+    const existingShare = await db.query.sharedTrips.findFirst({
+      where: eq(sharedTrips.tripId, data.tripId),
+    });
+
+    if (existingShare) {
+      return { shareId: existingShare.shareToken };
+    }
+
+    const shareId = `trip_${customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 7)()}`;
+
+    await db.insert(sharedTrips).values({
+      tripId: data.tripId,
+      shareToken: shareId,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return { shareId };
   });
