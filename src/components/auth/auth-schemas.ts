@@ -13,6 +13,7 @@ export const signUpSchema = z
     cityId: z.number().optional(),
     countryId: z.number().optional(),
     additionalInfo: z.string().optional(),
+    image: z.string().optional(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
