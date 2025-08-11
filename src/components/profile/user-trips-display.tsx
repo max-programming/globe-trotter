@@ -13,6 +13,7 @@ import {
   Plane,
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
@@ -142,9 +143,25 @@ export function UserTripsDisplay() {
                     {trip.status}
                   </Badge>
                   {trip.isPublic ? (
-                    <Eye className="w-4 h-4 text-green-600" />
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Eye className="w-4 h-4 text-green-600 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-white">This trip is public</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
                   ) : (
-                    <EyeOff className="w-4 h-4 text-gray-400" />
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <EyeOff className="w-4 h-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-white">This trip is private</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               </div>
