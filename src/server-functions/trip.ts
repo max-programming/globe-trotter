@@ -4,7 +4,7 @@ import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
 import { trips, places, tripPlaces, tripItinerary } from "~/lib/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, asc } from "drizzle-orm";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -26,6 +26,8 @@ export const createTrip = createServerFn({ method: "POST" })
           mainText: data.place.main_text,
           secondaryText: data.place.secondary_text || null,
           placeTypes: data.place.types,
+          latitude: data.place.latitude,
+          longitude: data.place.longitude,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
@@ -103,11 +105,11 @@ export const reorderTripPlaces = createServerFn({ method: "POST" })
       throw new Error("Itinerary not found or access denied");
     }
 
-    const ids = data.orders.map((o) => o.tripPlaceId);
+    const ids = data.orders.map(o => o.tripPlaceId);
 
     // Build CASE expression using query builder
     const caseExpr = sql`CASE ${tripPlaces.id} ${sql.join(
-      data.orders.map((o) => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
+      data.orders.map(o => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
       sql` `
     )} ELSE ${tripPlaces.sortOrder} END`;
 
@@ -128,61 +130,34 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // First get the trip and verify ownership
-    const trip = await db
-      .select()
-      .from(trips)
-      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
-      .limit(1);
+    const trip = await db.query.trips.findFirst({
+      where: and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)),
+      with: {
+        place: true,
+        itinerary: {
+          orderBy: [asc(tripItinerary.date)],
+          with: {
+            places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-    if (!trip.length) {
+    if (!trip) {
       throw new Error("Trip not found or access denied");
     }
 
-    // Get trip itinerary with places (now including place details from places table)
-    const itineraryData = await db
-      .select({
-        itinerary: tripItinerary,
-        tripPlace: tripPlaces,
-        place: places,
-      })
-      .from(tripItinerary)
-      .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
-      .leftJoin(places, eq(tripPlaces.placeId, places.placeId))
-      .where(eq(tripItinerary.tripId, data.tripId))
-      .orderBy(
-        tripItinerary.date,
-        tripPlaces.sortOrder,
-        tripPlaces.scheduledTime
-      );
-
-    // Group places by itinerary day
-    const itineraryWithPlaces = itineraryData.reduce(
-      (acc, row) => {
-        const itineraryId = row.itinerary.id;
-
-        if (!acc[itineraryId]) {
-          acc[itineraryId] = {
-            ...row.itinerary,
-            places: [],
-          };
-        }
-
-        if (row.tripPlace && row.place) {
-          acc[itineraryId].places.push({
-            ...row.tripPlace,
-            placeDetails: row.place,
-          });
-        }
-
-        return acc;
-      },
-      {} as Record<string, any>
-    );
-
     return {
-      trip: trip[0],
-      itinerary: Object.values(itineraryWithPlaces),
+      trip: trip,
+      itinerary: trip.itinerary,
     };
   });
 
