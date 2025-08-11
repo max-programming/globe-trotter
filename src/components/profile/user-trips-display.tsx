@@ -11,10 +11,19 @@ import {
   EyeOff,
   Plus,
   Plane,
+  Ellipsis,
+  Share2,
+  Trash,
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
@@ -121,19 +130,19 @@ export function UserTripsDisplay() {
       </div>
 
       {/* Trips Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {trips.map((trip) => (
           <Card
             key={trip.id}
-            className="group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-ease overflow-hidden flex flex-col py-0"
+            className=" group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-ease overflow-hidden flex flex-col py-0 relative"
           >
             {/* Cover Image */}
-            {trip.coverImageUrl && (
+            {trip.destinationImageUrl && (
               <div className="aspect-video w-full bg-gradient-to-br from-primary-100 to-primary-200 rounded-t-xl overflow-hidden group-hover:scale-105 transition-ease">
                 <img
                   src={
-                    trip.coverImageUrl
-                      ? trip.coverImageUrl
+                    trip.destinationImageUrl
+                      ? trip.destinationImageUrl
                       : `https://api.dicebear.com/9.x/glass/svg?seed=${trip.name}`
                   }
                   alt={trip.name}
@@ -141,6 +150,42 @@ export function UserTripsDisplay() {
                 />
               </div>
             )}
+
+            {/* Fixed Dropdown Menu - positioned over the image but outside scaling container */}
+            <div className="absolute top-2 right-2 z-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="p-0 size-11 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-colors"
+                  >
+                    <Ellipsis className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to={`/trips/$tripId`}
+                      params={{ tripId: trip.id }}
+                      className="cursor-pointer"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share Trip
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" asChild>
+                    <Link
+                      to="/trips/$tripId"
+                      params={{ tripId: trip.id }}
+                      className="cursor-pointer"
+                    >
+                      <Trash className="h-4 w-4" />
+                      Delete Trip
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -154,27 +199,6 @@ export function UserTripsDisplay() {
                   >
                     {trip.status}
                   </Badge>
-                  {trip.isPublic ? (
-                    <>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Eye className="w-4 h-4 text-green-600 cursor-pointer" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-white">This trip is public</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <EyeOff className="w-4 h-4 text-gray-400 cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-white">This trip is private</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                 </div>
               </div>
 
@@ -226,7 +250,7 @@ export function UserTripsDisplay() {
                   className="w-full cursor-pointer"
                   variant="outline"
                 >
-                  <Link to="/trips/$tripId" params={{ tripId: trip.id }}>
+                  <Link to={`/trips/$tripId`} params={{ tripId: trip.id }}>
                     View Trip
                   </Link>
                 </Button>
