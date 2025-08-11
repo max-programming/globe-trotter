@@ -17,3 +17,9 @@ export function getTripWithStopsQuery(tripId: string) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
+import { getUserTripsFn } from "~/server-functions/trips";
+
+export const getUserTripsQuery = queryOptions({
+  queryKey: ["trips", "user"],
+  queryFn: getUserTripsFn,
+});

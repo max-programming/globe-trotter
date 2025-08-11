@@ -93,12 +93,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -168,12 +164,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -183,9 +175,7 @@
         "sessions_token_unique": {
           "name": "sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -269,12 +259,8 @@
           "name": "users_city_id_cities_id_fk",
           "tableFrom": "users",
           "tableTo": "cities",
-          "columnsFrom": [
-            "city_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["city_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -282,12 +268,8 @@
           "name": "users_country_id_countries_id_fk",
           "tableFrom": "users",
           "tableTo": "countries",
-          "columnsFrom": [
-            "country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["country_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -297,9 +279,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -500,12 +480,8 @@
           "name": "cities_country_id_countries_id_fk",
           "tableFrom": "cities",
           "tableTo": "countries",
-          "columnsFrom": [
-            "country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["country_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -567,6 +543,182 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.places": {
+      "name": "places",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "formatted_address": {
+          "name": "formatted_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "main_text": {
+          "name": "main_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "secondary_text": {
+          "name": "secondary_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "place_types": {
+          "name": "place_types",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country_name": {
+          "name": "country_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "administrative_levels": {
+          "name": "administrative_levels",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "photo_reference": {
+          "name": "photo_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "places_place_id_idx": {
+          "name": "places_place_id_idx",
+          "columns": [
+            {
+              "expression": "place_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "places_country_code_idx": {
+          "name": "places_country_code_idx",
+          "columns": [
+            {
+              "expression": "country_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "places_place_types_idx": {
+          "name": "places_place_types_idx",
+          "columns": [
+            {
+              "expression": "place_types",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "places_name_idx": {
+          "name": "places_name_idx",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "places_placeId_unique": {
+          "name": "places_placeId_unique",
+          "nullsNotDistinct": false,
+          "columns": ["place_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -685,12 +837,8 @@
           "name": "shared_trips_trip_id_trips_id_fk",
           "tableFrom": "shared_trips",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -700,9 +848,7 @@
         "shared_trips_shareToken_unique": {
           "name": "shared_trips_shareToken_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "share_token"
-          ]
+          "columns": ["share_token"]
         }
       },
       "policies": {},
@@ -828,12 +974,8 @@
           "name": "trip_stop_activities_trip_stop_id_trip_stops_id_fk",
           "tableFrom": "trip_stop_activities",
           "tableTo": "trip_stops",
-          "columnsFrom": [
-            "trip_stop_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_stop_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1030,12 +1172,8 @@
           "name": "trip_stops_trip_id_trips_id_fk",
           "tableFrom": "trip_stops",
           "tableTo": "trips",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["trip_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1043,12 +1181,8 @@
           "name": "trip_stops_country_id_countries_id_fk",
           "tableFrom": "trip_stops",
           "tableTo": "countries",
-          "columnsFrom": [
-            "country_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["country_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1056,12 +1190,8 @@
           "name": "trip_stops_city_id_cities_id_fk",
           "tableFrom": "trip_stops",
           "tableTo": "cities",
-          "columnsFrom": [
-            "city_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["city_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1132,6 +1262,24 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_name": {
+          "name": "destination_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_image_url": {
+          "name": "destination_image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "user_id": {
           "name": "user_id",
@@ -1221,16 +1369,21 @@
         }
       },
       "foreignKeys": {
+        "trips_place_id_places_place_id_fk": {
+          "name": "trips_place_id_places_place_id_fk",
+          "tableFrom": "trips",
+          "tableTo": "places",
+          "columnsFrom": ["place_id"],
+          "columnsTo": ["place_id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "trips_user_id_users_id_fk": {
           "name": "trips_user_id_users_id_fk",
           "tableFrom": "trips",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1262,13 +1415,7 @@
     "public.trip_status": {
       "name": "trip_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "planned",
-        "active",
-        "completed",
-        "cancelled"
-      ]
+      "values": ["draft", "planned", "active", "completed", "cancelled"]
     }
   },
   "schemas": {},

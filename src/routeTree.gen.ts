@@ -20,6 +20,7 @@ import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
 import { Route as protectedTripsActivitiesTripIdRouteImport } from './routes/(protected)/trips/activities/$tripId'
+import { ServerRoute as ApiPlacesAutocompleteServerRouteImport } from './routes/api/places/autocomplete'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
 const rootServerRouteImport = createServerRootRoute()
@@ -68,6 +69,12 @@ const protectedTripsActivitiesTripIdRoute =
     id: '/trips/activities/$tripId',
     path: '/trips/activities/$tripId',
     getParentRoute: () => protectedRouteRoute,
+  } as any)
+const ApiPlacesAutocompleteServerRoute =
+  ApiPlacesAutocompleteServerRouteImport.update({
+    id: '/api/places/autocomplete',
+    path: '/api/places/autocomplete',
+    getParentRoute: () => rootServerRouteImport,
   } as any)
 const ApiAuthSplatServerRoute = ApiAuthSplatServerRouteImport.update({
   id: '/api/auth/$',
@@ -143,24 +150,28 @@ export interface RootRouteChildren {
 }
 export interface FileServerRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/places/autocomplete': typeof ApiPlacesAutocompleteServerRoute
 }
 export interface FileServerRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/places/autocomplete': typeof ApiPlacesAutocompleteServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
   '/api/auth/$': typeof ApiAuthSplatServerRoute
+  '/api/places/autocomplete': typeof ApiPlacesAutocompleteServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/api/auth/$'
+  fullPaths: '/api/auth/$' | '/api/places/autocomplete'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/api/auth/$'
-  id: '__root__' | '/api/auth/$'
+  to: '/api/auth/$' | '/api/places/autocomplete'
+  id: '__root__' | '/api/auth/$' | '/api/places/autocomplete'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
   ApiAuthSplatServerRoute: typeof ApiAuthSplatServerRoute
+  ApiPlacesAutocompleteServerRoute: typeof ApiPlacesAutocompleteServerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +243,13 @@ declare module '@tanstack/react-router' {
 }
 declare module '@tanstack/react-start/server' {
   interface ServerFileRoutesByPath {
+    '/api/places/autocomplete': {
+      id: '/api/places/autocomplete'
+      path: '/api/places/autocomplete'
+      fullPath: '/api/places/autocomplete'
+      preLoaderRoute: typeof ApiPlacesAutocompleteServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -285,6 +303,7 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 const rootServerRouteChildren: RootServerRouteChildren = {
   ApiAuthSplatServerRoute: ApiAuthSplatServerRoute,
+  ApiPlacesAutocompleteServerRoute: ApiPlacesAutocompleteServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport
   ._addFileChildren(rootServerRouteChildren)

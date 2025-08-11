@@ -234,3 +234,7 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
+.transition-ease {
+  @apply transition-all duration-300 ease-in-out;
+}

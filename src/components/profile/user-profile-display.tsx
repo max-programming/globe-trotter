@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -8,14 +7,11 @@ import { Skeleton } from "~/components/ui/skeleton";
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Edit,
-  Settings,
   Globe,
   MessageSquare,
-  Camera,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
@@ -23,15 +19,26 @@ import {
   getCountriesQuery,
   getCitiesByCountryQuery,
 } from "~/lib/queries/countries-and-cities";
-import { cn } from "~/lib/utils";
+import { UserTripsDisplay, UserTripsSkeleton } from "./user-trips-display";
+import { Suspense } from "react";
+import { Heading } from "../generic/heading";
+import { getUserTripsQuery } from "~/lib/queries/trips";
 
 export function UserProfileDisplay() {
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
+  const { data: trips } = useQuery(getUserTripsQuery);
+  const initialValue = 0;
+  const totalCities = trips?.reduce((acc, tripCount) => {
+    return acc + tripCount.tripStopCities;
+  }, initialValue);
+  const totalCountries = trips?.reduce((acc, tripCount) => {
+    return acc + tripCount.tripStopCountries;
+  }, initialValue);
 
   // Fetch countries and cities for display names
   const { data: countries = [] } = useQuery(getCountriesQuery);
   const { data: cities = [] } = useQuery(
-    getCitiesByCountryQuery(currentUser?.countryId)
+    getCitiesByCountryQuery(currentUser?.countryId ?? undefined)
   );
 
   if (!currentUser) {
@@ -59,9 +66,10 @@ export function UserProfileDisplay() {
           <User className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+          <Heading>My Profile</Heading>
+          {/* <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
             My Profile
-          </h1>
+          </h1> */}
           <p className="text-sm text-muted-foreground">
             View and manage your Globe Trotter profile
           </p>
@@ -110,13 +118,9 @@ export function UserProfileDisplay() {
                 </div>
 
                 <div className="flex flex-col space-y-2 pt-2">
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
-                  >
+                  <Button asChild size="sm" className="w-full">
                     <Link to="/settings/profile">
-                      <Edit className="w-3 h-3 mr-2" />
+                      <Edit className="w-3 h-3" />
                       Edit Profile
                     </Link>
                   </Button>
@@ -201,7 +205,7 @@ export function UserProfileDisplay() {
 
           {/* Travel Stats - Horizontal */}
           <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm">
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-0">
               <CardTitle className="flex items-center space-x-2 text-lg">
                 <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                   <Globe className="w-4 h-4 text-white" />
@@ -210,22 +214,24 @@ export function UserProfileDisplay() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {trips?.length}
+                  </p>
                   <p className="text-xs text-muted-foreground">Trips</p>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {totalCountries}
+                  </p>
                   <p className="text-xs text-muted-foreground">Countries</p>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {totalCities}
+                  </p>
                   <p className="text-xs text-muted-foreground">Cities</p>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-xs text-muted-foreground">Reviews</p>
                 </div>
               </div>
             </CardContent>
@@ -252,18 +258,11 @@ export function UserProfileDisplay() {
         </div>
       </div>
 
-      {/* Future Content Section - Placeholder for trips, reviews, etc. */}
+      {/* Trips Section */}
       <div className="space-y-6">
-        <div className="text-center py-12 bg-muted/30 rounded-2xl border-2 border-dashed border-muted-foreground/20">
-          <Globe className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-            Your Travel Journey Awaits
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            This space will showcase your trips, reviews, photos, and travel
-            achievements as you explore the world with Globe Trotter.
-          </p>
-        </div>
+        <Suspense fallback={<UserTripsSkeleton />}>
+          <UserTripsDisplay />
+        </Suspense>
       </div>
     </div>
   );
