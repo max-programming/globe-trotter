@@ -396,10 +396,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 
   return (
     <div className="min-h-screen ">
-      <div className="pl-10">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+      <div className="px-10 ms:pl-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left Side - Trip Itinerary */}
-          <div className="xl:col-span-3 flex flex-col space-y-4">
+          <div className="md:col-span-7 flex flex-col space-y-4">
             {/* Trip Header */}
             <div className="relative overflow-hidden">
               {/* Cover Image Background */}
@@ -858,7 +858,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
           </div>
 
           {/* Right Side - Google Maps */}
-          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-5rem)] self-start">
+          <div className="md:col-span-5 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6  h-96 mb-10 md:h-[calc(100vh-5rem)] self-start">
             <div className="h-full flex flex-col">
               <div className="p-4 border-b">
                 <h3 className="font-semibold flex items-center space-x-2">
