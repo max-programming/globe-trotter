@@ -40,7 +40,7 @@ export const Header = () => {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="p-0 size-11 rounded-full focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="p-0 size-11 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0"
             >
               <Avatar className="border-3 border-primary shadow-lg h-full w-full">
                 <AvatarImage src={session?.user?.image || ""} />
@@ -50,12 +50,12 @@ export const Header = () => {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-56">
             {/* user details */}
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{session?.user?.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-base font-medium">{session?.user?.name}</p>
+                <p className="text-sm text-muted-foreground">
                   {session?.user?.email}
                 </p>
               </div>
@@ -64,13 +64,13 @@ export const Header = () => {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>
-              <Link to="/profile">
+              <Link to="/profile" className="cursor-pointer">
                 <UserIcon className="h-4 w-4" />
                 My Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/settings/profile">
+              <Link to="/settings/profile" className="cursor-pointer">
                 <SettingsIcon className="h-4 w-4" />
                 Profile Settings
               </Link>
@@ -80,11 +80,12 @@ export const Header = () => {
 
             <DropdownMenuItem
               variant="destructive"
-              onClick={e => {
+              onClick={(e) => {
                 e.preventDefault();
                 signOut();
               }}
               disabled={isPending}
+              className="cursor-pointer"
             >
               {isPending ? (
                 <>
