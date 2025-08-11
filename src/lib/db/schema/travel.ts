@@ -11,8 +11,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 import { nanoid } from "nanoid";
+import { activityCategories, tripStatuses } from "./constants";
 
-export const countries = pgTable("countries", (t) => ({
+export const countries = pgTable("countries", t => ({
   id: t.serial().primaryKey(),
   name: t.text().notNull(),
   code: t.text().notNull(), // ISO 3166-1 alpha-2 code
@@ -30,7 +31,7 @@ export const countries = pgTable("countries", (t) => ({
 // Cities master table - global destination data
 export const cities = pgTable(
   "cities",
-  (t) => ({
+  t => ({
     id: t.serial().primaryKey(),
     name: t.text().notNull(),
     countryId: t
@@ -52,7 +53,7 @@ export const cities = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (table) => ({
+  table => ({
     countryIdx: index("cities_country_idx").on(table.countryId),
     cityCountryIdx: index("cities_city_country_idx").on(
       table.countryId,
@@ -64,18 +65,12 @@ export const cities = pgTable(
 );
 
 // Enums for better type safety and data integrity
-export const tripStatusEnum = pgEnum("trip_status", [
-  "draft",
-  "planned",
-  "active",
-  "completed",
-  "cancelled",
-]);
+export const tripStatusEnum = pgEnum("trip_status", tripStatuses);
 
 // Main trips table
 export const trips = pgTable(
   "trips",
-  (t) => ({
+  t => ({
     id: t
       .text()
       .primaryKey()
@@ -102,7 +97,7 @@ export const trips = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (table) => ({
+  table => ({
     userIdx: index("trips_user_idx").on(table.userId),
     statusIdx: index("trips_status_idx").on(table.status),
     publicIdx: index("trips_public_idx").on(table.isPublic),
@@ -113,7 +108,7 @@ export const trips = pgTable(
 // Trip stops - cities added to specific trips with order and dates
 export const tripStops = pgTable(
   "trip_stops",
-  (t) => ({
+  t => ({
     id: t
       .text()
       .primaryKey()
@@ -144,7 +139,7 @@ export const tripStops = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (table) => ({
+  table => ({
     tripIdx: index("trip_stops_trip_idx").on(table.tripId),
     orderIdx: index("trip_stops_order_idx").on(table.tripId, table.stopOrder),
     datesIdx: index("trip_stops_dates_idx").on(
@@ -160,23 +155,15 @@ export const tripStops = pgTable(
   })
 );
 
-export const activityCategoryEnum = pgEnum("activity_category", [
-  "sightseeing",
-  "food",
-  "entertainment",
-  "adventure",
-  "culture",
-  "shopping",
-  "relaxation",
-  "transportation",
-  "accommodation",
-  "other",
-]);
+export const activityCategoryEnum = pgEnum(
+  "activity_category",
+  activityCategories
+);
 
 // Trip activities - activities assigned to specific trip stops
 export const tripStopActivities = pgTable(
   "trip_stop_activities",
-  (t) => ({
+  t => ({
     id: t.serial().primaryKey(),
     tripStopId: t
       .text()
@@ -197,7 +184,7 @@ export const tripStopActivities = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (table) => ({
+  table => ({
     stopIdx: index("trip_activities_stop_idx").on(table.tripStopId),
     activityCategoryIdx: index("trip_activities_activity_category_idx").on(
       table.activityCategory
@@ -255,7 +242,7 @@ export const tripStopActivities = pgTable(
 // Trip sharing and collaboration
 export const sharedTrips = pgTable(
   "shared_trips",
-  (t) => ({
+  t => ({
     id: t
       .text()
       .primaryKey()
@@ -278,7 +265,7 @@ export const sharedTrips = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  (table) => ({
+  table => ({
     tripIdx: index("shared_trips_trip_idx").on(table.tripId),
     tokenIdx: index("shared_trips_token_idx").on(table.shareToken),
     activeIdx: index("shared_trips_active_idx").on(table.isActive),

@@ -41,6 +41,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle as AlertCircleIcon } from "lucide-react";
 import { useCreateTrip } from "~/lib/mutations/trips/useCreateTrip";
 import { useImageUpload } from "~/lib/hooks/use-image-upload";
+import { Heading } from "~/components/generic/heading";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -52,11 +53,11 @@ export const Route = createFileRoute("/(protected)/trips/new")({
 
 function RouteComponent() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30 relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:50px_50px]" />
+    <div>
+      {/* <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:50px_50px]" />
       <div className="absolute top-0 -left-40 w-80 h-80 bg-primary-200/20 rounded-full mix-blend-multiply filter blur-xl animate-blob" />
       <div className="absolute top-0 -right-40 w-80 h-80 bg-primary-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000" />
-      <div className="absolute -bottom-40 left-20 w-80 h-80 bg-primary-100/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" />
+      <div className="absolute -bottom-40 left-20 w-80 h-80 bg-primary-100/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" /> */}
 
       <div className="relative min-h-screen flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-3xl">
@@ -80,7 +81,7 @@ const CreateTripForm = () => {
     resetUpload,
     setPreviewUrl,
   } = useImageUpload({
-    onError: (error) => {
+    onError: error => {
       console.error("Image upload failed:", error);
     },
   });
@@ -108,7 +109,7 @@ const CreateTripForm = () => {
     setCoverFile(file);
     if (file) {
       const reader = new FileReader();
-      reader.onload = (ev) => setPreviewUrl(String(ev.target?.result || ""));
+      reader.onload = ev => setPreviewUrl(String(ev.target?.result || ""));
       reader.readAsDataURL(file);
     } else {
       // Clear preview and uploaded state and reset the hidden input
@@ -178,9 +179,10 @@ const CreateTripForm = () => {
           <Globe2 className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+          <Heading>Create New Trip</Heading>
+          {/* <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
             Create New Trip
-          </h1>
+          </h1> */}
           <p className="text-muted-foreground">Plan your next adventure</p>
         </div>
       </div>
@@ -229,14 +231,14 @@ const CreateTripForm = () => {
                       tabIndex={0}
                       aria-label="Upload cover image"
                       onClick={() => fileInputRef.current?.click()}
-                      onKeyDown={(e) => {
+                      onKeyDown={e => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
                           fileInputRef.current?.click();
                         }
                       }}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => {
                         e.preventDefault();
                         const file = e.dataTransfer.files?.[0] ?? null;
                         handleFile(file);
@@ -258,7 +260,7 @@ const CreateTripForm = () => {
                           <button
                             type="button"
                             aria-label="Remove image"
-                            onClick={(e) => {
+                            onClick={e => {
                               e.stopPropagation();
                               handleFile(null);
                             }}
@@ -281,7 +283,7 @@ const CreateTripForm = () => {
                         type="file"
                         accept="image/*"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={e => {
                           const file = e.target.files?.[0] ?? null;
                           handleFile(file);
                         }}
@@ -314,7 +316,7 @@ const CreateTripForm = () => {
                             placeholder="e.g., 2500"
                             className="h-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={field.value ?? ""}
-                            onChange={(e) => {
+                            onChange={e => {
                               const val = e.target.value;
                               field.onChange(
                                 val === "" ? undefined : Number(val)
@@ -348,7 +350,7 @@ const CreateTripForm = () => {
                       <FormControl>
                         <DatePicker
                           date={field.value}
-                          setDate={(d) => handleStartDateChange(d)}
+                          setDate={d => handleStartDateChange(d)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -365,7 +367,7 @@ const CreateTripForm = () => {
                       <FormControl>
                         <DatePicker
                           date={field.value}
-                          setDate={(d) => handleEndDateChange(d)}
+                          setDate={d => handleEndDateChange(d)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -402,7 +404,7 @@ const CreateTripForm = () => {
                               )}
                             >
                               {field.value
-                                ? countries.find((c) => c.id === field.value)
+                                ? countries.find(c => c.id === field.value)
                                     ?.name
                                 : "Select country"}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -414,7 +416,7 @@ const CreateTripForm = () => {
                             <CommandInput placeholder="Search country..." />
                             <CommandEmpty>No country found.</CommandEmpty>
                             <CommandGroup className="max-h-64 overflow-auto">
-                              {countries.map((country) => (
+                              {countries.map(country => (
                                 <CommandItem
                                   value={country.name}
                                   key={country.id}
@@ -503,7 +505,7 @@ const activitySeeds: Record<string, string[]> = {
 const Suggestions = memo(({ countryId }: SuggestionsProps) => {
   const { data: countries = [] } = useQuery(getCountriesQuery);
 
-  const selectedCountryName = countries.find((c) => c.id === countryId)?.name;
+  const selectedCountryName = countries.find(c => c.id === countryId)?.name;
   const activities = activitySeeds.default;
 
   if (!countryId) {
@@ -538,7 +540,7 @@ const Suggestions = memo(({ countryId }: SuggestionsProps) => {
         <CardContent className="p-6 space-y-3">
           <h4 className="font-semibold">Activities to try</h4>
           <ul className="list-disc pl-5 space-y-1 text-sm">
-            {activities.map((a) => (
+            {activities.map(a => (
               <li key={a} className="leading-relaxed">
                 {a}
               </li>

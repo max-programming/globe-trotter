@@ -5,6 +5,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import {
@@ -16,6 +18,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useSignOut } from "~/lib/mutations/auth/use-sign-out";
+import { Link } from "@tanstack/react-router";
 
 export const Header = () => {
   const { data: session } = useQuery(getSessionQuery);
@@ -48,17 +51,36 @@ export const Header = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
-              <UserIcon className="h-4 w-4" />
-              My Profile
+            {/* user details */}
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{session?.user?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {session?.user?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link to="/profile">
+                <UserIcon className="h-4 w-4" />
+                My Profile
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <SettingsIcon className="h-4 w-4" />
-              Profile Setting
+            <DropdownMenuItem asChild>
+              <Link to="/settings/profile">
+                <SettingsIcon className="h-4 w-4" />
+                Profile Settings
+              </Link>
             </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
               variant="destructive"
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 signOut();
               }}

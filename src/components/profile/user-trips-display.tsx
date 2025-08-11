@@ -13,6 +13,7 @@ import {
   Plane,
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
+import { Link } from "@tanstack/react-router";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
@@ -63,9 +64,12 @@ export function UserTripsDisplay() {
           <Button
             size="sm"
             className="bg-gradient-to-r from-primary-500 to-primary-600"
+            asChild
           >
-            <Plus className="w-4 h-4" />
-            New Trip
+            <Link to="/trips/new">
+              <Plus className="w-4 h-4" />
+              New Trip
+            </Link>
           </Button>
         </div>
 
@@ -79,9 +83,11 @@ export function UserTripsDisplay() {
             Start planning your next adventure! Create your first trip to
             explore the world.
           </p>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Your First Trip
+          <Button asChild>
+            <Link to="/trips/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Trip
+            </Link>
           </Button>
         </div>
       </div>
@@ -102,11 +108,14 @@ export function UserTripsDisplay() {
           </Badge>
         </div>
         <Button
+          asChild
           size="sm"
-          className="bg-gradient-to-r from-primary-500 to-primary-600"
+          // className="bg-gradient-to-r from-primary-500 to-primary-600"
         >
-          <Plus className="w-4 h-4" />
-          New Trip
+          <Link to="/trips/new">
+            <Plus className="w-4 h-4" />
+            New Trip
+          </Link>
         </Button>
       </div>
 

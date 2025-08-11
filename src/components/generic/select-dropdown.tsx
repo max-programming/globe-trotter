@@ -34,14 +34,18 @@ function SelectDropdown({
   return (
     <div className="space-y-2">
       <Select>
-        <SelectTrigger className={cn("w-full", className)}>
-          <SelectValue placeholder={placeholder} />
+        <SelectTrigger className={cn("w-full capitalize", className)}>
+          <SelectValue placeholder={placeholder} className="capitalize" />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectLabel>{placeholder}</SelectLabel>
-            {options?.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+            <SelectLabel className="capitalize">{placeholder}</SelectLabel>
+            {options?.map(option => (
+              <SelectItem
+                key={option.value}
+                value={option.value}
+                className="capitalize"
+              >
                 {option.label}
               </SelectItem>
             ))}

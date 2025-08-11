@@ -3,22 +3,16 @@ import BannerSlider from "~/components/core/banner-slider";
 import Search from "~/components/core/search";
 import { Heading } from "~/components/generic/heading";
 import SelectDropdown from "~/components/generic/select-dropdown";
-
-const filterOptions = [
-  { value: "draft", label: "Draft" },
-  { value: "planned", label: "Planned" },
-  { value: "active", label: "Active" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
-];
+import { tripStatuses } from "~/lib/db/schema/constants";
 
 const sortOptions = [
-  { value: "all", label: "All" },
-  { value: "science", label: "Science" },
-  { value: "technology", label: "Technology" },
-  { value: "engineering", label: "Engineering" },
-  { value: "math", label: "Math" },
+  { value: "date", label: "Date" },
+  { value: "name", label: "Name" },
 ];
+const filterOptions = tripStatuses.map(status => ({
+  value: status,
+  label: status,
+}));
 
 export const Route = createFileRoute("/(protected)/")({
   component: HomePage,
