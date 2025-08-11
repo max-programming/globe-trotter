@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { getTripWithStopsQuery } from "~/lib/queries/trips";
-import { getCountriesQuery } from "~/lib/queries/countries-and-cities";
+import { getTripWithItineraryQuery } from "~/lib/queries/trips";
 import { ItineraryBuilder } from "~/components/trips/ItineraryBuilder";
 
 const tripIdSchema = z.object({
@@ -15,9 +14,8 @@ export const Route = createFileRoute("/(protected)/trips/activities/$tripId")({
     stringify: (params) => params,
   },
   loader: ({ context, params }) => {
-    // Preload trip data and countries for stop creation
-    context.queryClient.ensureQueryData(getTripWithStopsQuery(params.tripId));
-    context.queryClient.ensureQueryData(getCountriesQuery);
+    // Preload trip itinerary data
+    context.queryClient.ensureQueryData(getTripWithItineraryQuery(params.tripId));
   },
   component: RouteComponent,
 });

@@ -1,25 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Calendar, MapPin, DollarSign } from "lucide-react";
+import { Plus, Calendar, MapPin, StickyNote } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Alert, AlertDescription } from "~/components/ui/alert";
-import { getTripWithStopsQuery } from "~/lib/queries/trips";
-import { TripStopCard } from "./TripStopCard";
-import { StopCreator } from "./StopCreator";
+import { getTripWithItineraryQuery } from "~/lib/queries/trips";
+import { format } from "date-fns";
 import { Heading } from "../generic/heading";
-import { useUserCurrency } from "~/lib/hooks/use-user-currency";
+import { PlaceManager } from "./PlaceManager";
 
 interface ItineraryBuilderProps {
   tripId: string;
 }
 
 export function ItineraryBuilder({ tripId }: ItineraryBuilderProps) {
-  const [showStopCreator, setShowStopCreator] = useState(false);
-  const { formatAmount } = useUserCurrency();
+  const [showPlaceManager, setShowPlaceManager] = useState(false);
+  const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
 
-  const { data, isLoading, error } = useQuery(getTripWithStopsQuery(tripId));
+  const { data, isLoading, error } = useQuery(getTripWithItineraryQuery(tripId));
 
   if (isLoading) {
     return <ItineraryBuilderSkeleton />;
@@ -45,11 +44,10 @@ export function ItineraryBuilder({ tripId }: ItineraryBuilderProps) {
     );
   }
 
-  const { trip, stops } = data;
+  const { trip, itinerary } = data;
 
-  const totalBudget = stops.reduce((sum, stop) => sum + (stop.budget || 0), 0);
-  const totalActivities = stops.reduce(
-    (sum, stop) => sum + (stop.activities?.length || 0),
+  const totalPlaces = itinerary.reduce(
+    (sum, day) => sum + (day.places?.length || 0),
     0
   );
 
@@ -94,12 +92,25 @@ export function ItineraryBuilder({ tripId }: ItineraryBuilderProps) {
           <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-primary-500" />
+                <div>
+                  <p className="text-sm font-medium">Days</p>
+                  <p className="text-xs text-muted-foreground">
+                    {itinerary.length} planned
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
                 <MapPin className="w-5 h-5 text-primary-500" />
                 <div>
-                  <p className="text-sm font-medium">Stops</p>
+                  <p className="text-sm font-medium">Places</p>
                   <p className="text-xs text-muted-foreground">
-                    {stops.length}{" "}
-                    {stops.length === 1 ? "destination" : "destinations"}
+                    {totalPlaces} added
                   </p>
                 </div>
               </div>
@@ -109,25 +120,11 @@ export function ItineraryBuilder({ tripId }: ItineraryBuilderProps) {
           <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Plus className="w-5 h-5 text-primary-500" />
+                <StickyNote className="w-5 h-5 text-primary-500" />
                 <div>
-                  <p className="text-sm font-medium">Activities</p>
+                  <p className="text-sm font-medium">Notes</p>
                   <p className="text-xs text-muted-foreground">
-                    {totalActivities} planned
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-5 h-5 text-primary-500" />
-                <div>
-                  <p className="text-sm font-medium">Budget</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatAmount(totalBudget)} allocated
+                    {itinerary.filter(day => day.notes).length} days
                   </p>
                 </div>
               </div>
@@ -136,62 +133,133 @@ export function ItineraryBuilder({ tripId }: ItineraryBuilderProps) {
         </div>
       </div>
 
-      {/* Action Bar */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Trip Itinerary</h2>
-        <Button
-          onClick={() => setShowStopCreator(true)}
-          className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Stop
-        </Button>
-      </div>
-
-      {/* Trip Stops */}
+      {/* Daily Itinerary */}
       <div className="space-y-6">
-        {stops.length === 0 ? (
+        <h2 className="text-xl font-semibold">Daily Itinerary</h2>
+        
+        {itinerary.length === 0 ? (
           <Card className="shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
             <CardContent className="p-12 text-center">
               <div className="space-y-4">
-                <MapPin className="w-12 h-12 text-muted-foreground mx-auto" />
+                <Calendar className="w-12 h-12 text-muted-foreground mx-auto" />
                 <div>
-                  <h3 className="text-lg font-semibold">No stops added yet</h3>
+                  <h3 className="text-lg font-semibold">No itinerary generated</h3>
                   <p className="text-muted-foreground">
-                    Start building your itinerary by adding your first
-                    destination.
+                    Your trip needs start and end dates to generate a daily itinerary.
                   </p>
                 </div>
-                <Button
-                  onClick={() => setShowStopCreator(true)}
-                  className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Your First Stop
-                </Button>
               </div>
             </CardContent>
           </Card>
         ) : (
-          stops.map((stop, index) => (
-            <TripStopCard
-              key={stop.id}
-              stop={stop}
-              stopNumber={index + 1}
-              tripId={tripId}
-            />
+          itinerary.map((day, index) => (
+            <Card key={day.id} className="shadow-2xl border-0 bg-card/95 backdrop-blur-sm overflow-hidden">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Day Header */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center justify-center w-8 h-8 bg-primary-500 text-white rounded-full font-semibold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">
+                          {format(new Date(day.date), 'EEEE, MMMM d')}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {day.places?.length || 0} places planned
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedItinerary(day);
+                        setShowPlaceManager(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Place
+                    </Button>
+                  </div>
+
+                  {/* Day Notes */}
+                  {day.notes && (
+                    <div className="flex items-start space-x-2 p-3 bg-muted/30 rounded-lg">
+                      <StickyNote className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-muted-foreground">{day.notes}</p>
+                    </div>
+                  )}
+
+                  {/* Places for this day */}
+                  {day.places && day.places.length > 0 ? (
+                    <div className="space-y-3">
+                      {day.places.map((place: any, placeIndex: number) => (
+                        <div
+                          key={place.id}
+                          className="p-4 rounded-lg border bg-background hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3 flex-1">
+                              <div className="flex items-center justify-center w-6 h-6 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
+                                {placeIndex + 1}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <h4 className="font-medium">{place.name}</h4>
+                                  <span className="px-2 py-1 bg-primary-50 text-primary-700 rounded-full text-xs font-medium">
+                                    {place.type}
+                                  </span>
+                                </div>
+                                
+                                <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                  {place.time && (
+                                    <div className="flex items-center space-x-1">
+                                      <Calendar className="w-3 h-3" />
+                                      <span>{place.time}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {place.description && (
+                                  <p className="text-sm text-muted-foreground mt-2">{place.description}</p>
+                                )}
+                                
+                                {place.notes && (
+                                  <p className="text-xs text-muted-foreground mt-2">{place.notes}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <MapPin className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-sm">No places planned for this day</p>
+                      <p className="text-xs">Click "Add Place" to start planning</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))
         )}
       </div>
 
-      {/* Stop Creator Modal */}
-      {showStopCreator && (
-        <StopCreator
-          tripId={tripId}
-          isOpen={showStopCreator}
-          onClose={() => setShowStopCreator(false)}
-          tripStartDate={trip.startDate}
-          tripEndDate={trip.endDate}
+      {/* Place Manager Modal */}
+      {showPlaceManager && selectedItinerary && (
+        <PlaceManager
+          tripItineraryId={selectedItinerary.id}
+          isOpen={showPlaceManager}
+          onClose={() => {
+            setShowPlaceManager(false);
+            setSelectedItinerary(null);
+          }}
+          existingPlaces={selectedItinerary.places || []}
+          dayDate={selectedItinerary.date}
         />
       )}
     </div>

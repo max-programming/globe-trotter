@@ -3,13 +3,14 @@ import { z } from "zod";
 import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
-import { trips, tripStops, tripStopActivities, cities, countries } from "~/lib/db/schema";
+import { trips, tripItinerary, tripPlaces } from "~/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
+    // Create the trip
     const [newTrip] = await db
       .insert(trips)
       .values({
@@ -23,10 +24,33 @@ export const createTrip = createServerFn({ method: "POST" })
       })
       .returning();
 
+    // Generate daily itinerary entries if dates are provided
+    if (data.startDate && data.endDate) {
+      const startDate = new Date(data.startDate);
+      const endDate = new Date(data.endDate);
+
+      const itineraryEntries = [];
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        itineraryEntries.push({
+          tripId: newTrip.id,
+          date: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
+        });
+
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Insert all itinerary entries
+      if (itineraryEntries.length > 0) {
+        await db.insert(tripItinerary).values(itineraryEntries);
+      }
+    }
+
     return newTrip;
   });
 
-export const getTripWithStops = createServerFn({ method: "GET" })
+export const getTripWithItinerary = createServerFn({ method: "GET" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
@@ -41,256 +65,198 @@ export const getTripWithStops = createServerFn({ method: "GET" })
       throw new Error("Trip not found or access denied");
     }
 
-    // Get trip stops with their cities, countries, and activities
-    const stops = await db
+    // Get trip itinerary with places
+    const itineraryData = await db
       .select({
-        tripStop: tripStops,
-        city: cities,
-        country: countries,
-        activities: tripStopActivities,
+        itinerary: tripItinerary,
+        place: tripPlaces,
       })
-      .from(tripStops)
-      .innerJoin(cities, eq(tripStops.cityId, cities.id))
-      .innerJoin(countries, eq(tripStops.countryId, countries.id))
-      .leftJoin(tripStopActivities, eq(tripStops.id, tripStopActivities.tripStopId))
-      .where(eq(tripStops.tripId, data.tripId))
-      .orderBy(tripStops.stopOrder, desc(tripStopActivities.createdAt));
+      .from(tripItinerary)
+      .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
+      .where(eq(tripItinerary.tripId, data.tripId))
+      .orderBy(tripItinerary.date, tripPlaces.time);
 
-    // Group activities by stop
-    const stopsWithActivities = stops.reduce((acc, row) => {
-      const stopId = row.tripStop.id;
-      
-      if (!acc[stopId]) {
-        acc[stopId] = {
-          ...row.tripStop,
-          city: row.city,
-          country: row.country,
-          activities: [],
-        };
-      }
-      
-      if (row.activities) {
-        acc[stopId].activities.push(row.activities);
-      }
-      
-      return acc;
-    }, {} as Record<string, any>);
+    // Group places by itinerary day
+    const itineraryWithPlaces = itineraryData.reduce(
+      (acc, row) => {
+        const itineraryId = row.itinerary.id;
+
+        if (!acc[itineraryId]) {
+          acc[itineraryId] = {
+            ...row.itinerary,
+            places: [],
+          };
+        }
+
+        if (row.place) {
+          acc[itineraryId].places.push(row.place);
+        }
+
+        return acc;
+      },
+      {} as Record<string, any>
+    );
 
     return {
       trip: trip[0],
-      stops: Object.values(stopsWithActivities),
+      itinerary: Object.values(itineraryWithPlaces),
     };
   });
 
-export const createTripStop = createServerFn({ method: "POST" })
-  .validator(z.object({
-    tripId: z.string(),
-    countryId: z.number(),
-    cityId: z.number(),
-    arrivalDate: z.string().optional(),
-    departureDate: z.string().optional(),
-    budget: z.number().optional(),
-    notes: z.string().optional(),
-  }))
-  .middleware([authMiddleware])
-  .handler(async ({ data, context }) => {
-    // Verify trip ownership
-    const trip = await db
-      .select()
-      .from(trips)
-      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
-      .limit(1);
-
-    if (!trip.length) {
-      throw new Error("Trip not found or access denied");
-    }
-
-    // Get the next stop order
-    const lastStop = await db
-      .select({ stopOrder: tripStops.stopOrder })
-      .from(tripStops)
-      .where(eq(tripStops.tripId, data.tripId))
-      .orderBy(desc(tripStops.stopOrder))
-      .limit(1);
-
-    const nextOrder = lastStop.length ? lastStop[0].stopOrder + 100 : 100;
-
-    const [newStop] = await db
-      .insert(tripStops)
-      .values({
-        tripId: data.tripId,
-        countryId: data.countryId,
-        cityId: data.cityId,
-        stopOrder: nextOrder,
-        arrivalDate: data.arrivalDate,
-        departureDate: data.departureDate,
-        budget: data.budget,
-        notes: data.notes,
-        updatedAt: new Date(),
-      })
-      .returning();
-
-    return newStop;
-  });
-
-export const updateTripStop = createServerFn({ method: "PUT" })
-  .validator(z.object({
-    stopId: z.string(),
-    arrivalDate: z.string().optional(),
-    departureDate: z.string().optional(),
-    budget: z.number().optional(),
-    notes: z.string().optional(),
-  }))
+export const updateItineraryNotes = createServerFn({ method: "PUT" })
+  .validator(
+    z.object({
+      itineraryId: z.number(),
+      notes: z.string().optional(),
+    })
+  )
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     // Verify ownership through trip
-    const stopWithTrip = await db
+    const itineraryWithTrip = await db
       .select({ tripUserId: trips.userId })
-      .from(tripStops)
-      .innerJoin(trips, eq(tripStops.tripId, trips.id))
-      .where(eq(tripStops.id, data.stopId))
+      .from(tripItinerary)
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripItinerary.id, data.itineraryId))
       .limit(1);
 
-    if (!stopWithTrip.length || stopWithTrip[0].tripUserId !== context.user.id) {
-      throw new Error("Stop not found or access denied");
+    if (
+      !itineraryWithTrip.length ||
+      itineraryWithTrip[0].tripUserId !== context.user.id
+    ) {
+      throw new Error("Itinerary not found or access denied");
     }
 
-    const [updatedStop] = await db
-      .update(tripStops)
+    const [updatedItinerary] = await db
+      .update(tripItinerary)
       .set({
-        arrivalDate: data.arrivalDate,
-        departureDate: data.departureDate,
-        budget: data.budget,
         notes: data.notes,
         updatedAt: new Date(),
       })
-      .where(eq(tripStops.id, data.stopId))
+      .where(eq(tripItinerary.id, data.itineraryId))
       .returning();
 
-    return updatedStop;
+    return updatedItinerary;
   });
 
-export const deleteTripStop = createServerFn({ method: "DELETE" })
-  .validator(z.object({ stopId: z.string() }))
+export const createPlace = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      tripItineraryId: z.number(),
+      name: z.string(),
+      type: z.string(),
+      description: z.string().optional(),
+      time: z.string().optional(), // HH:MM format
+      notes: z.string().optional(),
+    })
+  )
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // Verify ownership through trip
-    const stopWithTrip = await db
+    // Verify ownership through trip itinerary
+    const itineraryWithTrip = await db
       .select({ tripUserId: trips.userId })
-      .from(tripStops)
-      .innerJoin(trips, eq(tripStops.tripId, trips.id))
-      .where(eq(tripStops.id, data.stopId))
+      .from(tripItinerary)
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripItinerary.id, data.tripItineraryId))
       .limit(1);
 
-    if (!stopWithTrip.length || stopWithTrip[0].tripUserId !== context.user.id) {
-      throw new Error("Stop not found or access denied");
+    if (
+      !itineraryWithTrip.length ||
+      itineraryWithTrip[0].tripUserId !== context.user.id
+    ) {
+      throw new Error("Itinerary not found or access denied");
     }
 
-    await db.delete(tripStops).where(eq(tripStops.id, data.stopId));
-    
-    return { success: true };
-  });
-
-export const createActivity = createServerFn({ method: "POST" })
-  .validator(z.object({
-    tripStopId: z.string(),
-    activityCategory: z.enum(["sightseeing", "food", "entertainment", "adventure", "culture", "shopping", "relaxation", "transportation", "accommodation", "other"]),
-    activityName: z.string(),
-    scheduledDate: z.string().optional(),
-    actualCost: z.number().optional(),
-    notes: z.string().optional(),
-  }))
-  .middleware([authMiddleware])
-  .handler(async ({ data, context }) => {
-    // Verify ownership through trip stop
-    const stopWithTrip = await db
-      .select({ tripUserId: trips.userId })
-      .from(tripStops)
-      .innerJoin(trips, eq(tripStops.tripId, trips.id))
-      .where(eq(tripStops.id, data.tripStopId))
-      .limit(1);
-
-    if (!stopWithTrip.length || stopWithTrip[0].tripUserId !== context.user.id) {
-      throw new Error("Stop not found or access denied");
-    }
-
-    const [newActivity] = await db
-      .insert(tripStopActivities)
+    const [newPlace] = await db
+      .insert(tripPlaces)
       .values({
-        tripStopId: data.tripStopId,
-        activityCategory: data.activityCategory,
-        activityName: data.activityName,
-        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : null,
-        actualCost: data.actualCost,
+        tripItineraryId: data.tripItineraryId,
+        name: data.name,
+        type: data.type,
+        description: data.description,
+        time: data.time,
         notes: data.notes,
         updatedAt: new Date(),
       })
       .returning();
 
-    return newActivity;
+    return newPlace;
   });
 
-export const updateActivity = createServerFn({ method: "PUT" })
-  .validator(z.object({
-    activityId: z.number(),
-    activityCategory: z.enum(["sightseeing", "food", "entertainment", "adventure", "culture", "shopping", "relaxation", "transportation", "accommodation", "other"]).optional(),
-    activityName: z.string().optional(),
-    scheduledDate: z.string().optional(),
-    actualCost: z.number().optional(),
-    notes: z.string().optional(),
-    isCompleted: z.boolean().optional(),
-  }))
+export const updatePlace = createServerFn({ method: "PUT" })
+  .validator(
+    z.object({
+      placeId: z.number(),
+      name: z.string().optional(),
+      type: z.string().optional(),
+      description: z.string().optional(),
+      time: z.string().optional(),
+      notes: z.string().optional(),
+    })
+  )
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // Verify ownership through trip stop and trip
-    const activityWithTrip = await db
+    // Verify ownership through trip itinerary and trip
+    const placeWithTrip = await db
       .select({ tripUserId: trips.userId })
-      .from(tripStopActivities)
-      .innerJoin(tripStops, eq(tripStopActivities.tripStopId, tripStops.id))
-      .innerJoin(trips, eq(tripStops.tripId, trips.id))
-      .where(eq(tripStopActivities.id, data.activityId))
+      .from(tripPlaces)
+      .innerJoin(
+        tripItinerary,
+        eq(tripPlaces.tripItineraryId, tripItinerary.id)
+      )
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripPlaces.id, data.placeId))
       .limit(1);
 
-    if (!activityWithTrip.length || activityWithTrip[0].tripUserId !== context.user.id) {
-      throw new Error("Activity not found or access denied");
+    if (
+      !placeWithTrip.length ||
+      placeWithTrip[0].tripUserId !== context.user.id
+    ) {
+      throw new Error("Place not found or access denied");
     }
 
     const updateData: any = { updatedAt: new Date() };
-    
-    if (data.activityCategory !== undefined) updateData.activityCategory = data.activityCategory;
-    if (data.activityName !== undefined) updateData.activityName = data.activityName;
-    if (data.scheduledDate !== undefined) updateData.scheduledDate = data.scheduledDate ? new Date(data.scheduledDate) : null;
-    if (data.actualCost !== undefined) updateData.actualCost = data.actualCost;
-    if (data.notes !== undefined) updateData.notes = data.notes;
-    if (data.isCompleted !== undefined) updateData.isCompleted = data.isCompleted;
 
-    const [updatedActivity] = await db
-      .update(tripStopActivities)
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.description !== undefined)
+      updateData.description = data.description;
+    if (data.time !== undefined) updateData.time = data.time;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
+    const [updatedPlace] = await db
+      .update(tripPlaces)
       .set(updateData)
-      .where(eq(tripStopActivities.id, data.activityId))
+      .where(eq(tripPlaces.id, data.placeId))
       .returning();
 
-    return updatedActivity;
+    return updatedPlace;
   });
 
-export const deleteActivity = createServerFn({ method: "DELETE" })
-  .validator(z.object({ activityId: z.number() }))
+export const deletePlace = createServerFn({ method: "DELETE" })
+  .validator(z.object({ placeId: z.number() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // Verify ownership through trip stop and trip
-    const activityWithTrip = await db
+    // Verify ownership through trip itinerary and trip
+    const placeWithTrip = await db
       .select({ tripUserId: trips.userId })
-      .from(tripStopActivities)
-      .innerJoin(tripStops, eq(tripStopActivities.tripStopId, tripStops.id))
-      .innerJoin(trips, eq(tripStops.tripId, trips.id))
-      .where(eq(tripStopActivities.id, data.activityId))
+      .from(tripPlaces)
+      .innerJoin(
+        tripItinerary,
+        eq(tripPlaces.tripItineraryId, tripItinerary.id)
+      )
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripPlaces.id, data.placeId))
       .limit(1);
 
-    if (!activityWithTrip.length || activityWithTrip[0].tripUserId !== context.user.id) {
-      throw new Error("Activity not found or access denied");
+    if (
+      !placeWithTrip.length ||
+      placeWithTrip[0].tripUserId !== context.user.id
+    ) {
+      throw new Error("Place not found or access denied");
     }
 
-    await db.delete(tripStopActivities).where(eq(tripStopActivities.id, data.activityId));
-    
+    await db.delete(tripPlaces).where(eq(tripPlaces.id, data.placeId));
+
     return { success: true };
   });
