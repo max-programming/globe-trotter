@@ -17,6 +17,7 @@ import { Route as protectedIndexRouteImport } from './routes/(protected)/index'
 import { Route as protectedProfileRouteImport } from './routes/(protected)/profile'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
+import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
@@ -50,6 +51,11 @@ const authSignInRoute = authSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => authRouteRoute,
 } as any)
+const protectedTripsNewRoute = protectedTripsNewRouteImport.update({
+  id: '/trips/new',
+  path: '/trips/new',
+  getParentRoute: () => protectedRouteRoute,
+} as any)
 const protectedSettingsProfileRoute =
   protectedSettingsProfileRouteImport.update({
     id: '/settings/profile',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
+  '/trips/new': typeof protectedTripsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof protectedIndexRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
+  '/trips/new': typeof protectedTripsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -85,12 +93,25 @@ export interface FileRoutesById {
   '/(protected)/profile': typeof protectedProfileRoute
   '/(protected)/': typeof protectedIndexRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
+  '/(protected)/trips/new': typeof protectedTripsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-up' | '/profile' | '/settings/profile'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/profile'
+    | '/settings/profile'
+    | '/trips/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/sign-up' | '/profile' | '/settings/profile'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/sign-up'
+    | '/profile'
+    | '/settings/profile'
+    | '/trips/new'
   id:
     | '__root__'
     | '/(auth)'
@@ -100,6 +121,7 @@ export interface FileRouteTypes {
     | '/(protected)/profile'
     | '/(protected)/'
     | '/(protected)/settings/profile'
+    | '/(protected)/trips/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -172,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authSignInRouteImport
       parentRoute: typeof authRouteRoute
     }
+    '/(protected)/trips/new': {
+      id: '/(protected)/trips/new'
+      path: '/trips/new'
+      fullPath: '/trips/new'
+      preLoaderRoute: typeof protectedTripsNewRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
     '/(protected)/settings/profile': {
       id: '/(protected)/settings/profile'
       path: '/settings/profile'
@@ -211,12 +240,14 @@ interface protectedRouteRouteChildren {
   protectedProfileRoute: typeof protectedProfileRoute
   protectedIndexRoute: typeof protectedIndexRoute
   protectedSettingsProfileRoute: typeof protectedSettingsProfileRoute
+  protectedTripsNewRoute: typeof protectedTripsNewRoute
 }
 
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
   protectedProfileRoute: protectedProfileRoute,
   protectedIndexRoute: protectedIndexRoute,
   protectedSettingsProfileRoute: protectedSettingsProfileRoute,
+  protectedTripsNewRoute: protectedTripsNewRoute,
 }
 
 const protectedRouteRouteWithChildren = protectedRouteRoute._addFileChildren(
