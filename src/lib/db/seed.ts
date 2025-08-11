@@ -1,6 +1,6 @@
 import { db } from "./connection";
-import { and, gte, lte, eq } from "drizzle-orm";
-import { cities, tripStopActivities, tripStops, trips, users } from "./schema";
+import { eq } from "drizzle-orm";
+import { tripItinerary, tripPlaces, trips, users } from "./schema";
 import { nanoid } from "nanoid";
 
 type SeedTripSpec = {
@@ -12,10 +12,6 @@ type SeedTripSpec = {
 };
 
 const USER_ID = "o1BouGAWEMNeNcYAoTkO8Zkk8c0LOqK3";
-const COUNTRY_ID_MIN = 29;
-const COUNTRY_ID_MAX = 69;
-const CITY_ID_MIN = 128;
-const CITY_ID_MAX = 393;
 
 const COVER_IMAGES: string[] = [
   // Unsplash nature/mountain images
@@ -26,45 +22,44 @@ const COVER_IMAGES: string[] = [
   "https://images.unsplash.com/photo-1504457049879-87a5f1e7e3d6",
 ];
 
-const ACTIVITY_PRESETS: Record<string, string[]> = {
-  sightseeing: [
-    "Old town walking tour",
-    "Panoramic hill viewpoint",
-    "Iconic landmark visit",
+const PLACE_PRESETS: Record<string, string[]> = {
+  restaurant: [
+    "Local Tavern",
+    "Street Food Market",
+    "Traditional Restaurant",
+    "Rooftop Bistro",
   ],
-  food: ["Street food crawl", "Local market tasting", "Traditional dinner"],
-  adventure: ["Sunrise hike", "Mountain trail trek", "Lakeside cycling"],
-  culture: ["Museum afternoon", "Historic district", "Architecture highlights"],
-  relaxation: ["Park picnic", "Spa & wellness", "River promenade"],
+  attraction: [
+    "Historic Cathedral",
+    "Old Town Square",
+    "Scenic Viewpoint", 
+    "Famous Monument",
+  ],
+  museum: [
+    "National Museum",
+    "Art Gallery",
+    "History Museum",
+    "Cultural Center",
+  ],
+  park: [
+    "City Central Park",
+    "Botanical Garden",
+    "Riverside Walk",
+    "Mountain Trail",
+  ],
+  shopping: [
+    "Local Market",
+    "Shopping District",
+    "Artisan Quarter",
+    "Mall Center",
+  ],
 };
 
 const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
 const toDateOnly = (d: Date): string => d.toISOString().slice(0, 10);
 
-async function getCandidateCities() {
-  const rows = await db
-    .select()
-    .from(cities)
-    .where(
-      and(
-        gte(cities.id, CITY_ID_MIN),
-        lte(cities.id, CITY_ID_MAX),
-        gte(cities.countryId, COUNTRY_ID_MIN),
-        lte(cities.countryId, COUNTRY_ID_MAX)
-      )
-    );
-  return rows;
-}
-
-async function createTripsWithStopsAndActivities() {
-  const candidateCities = await getCandidateCities();
-  if (candidateCities.length === 0) {
-    throw new Error(
-      `No cities found in id [${CITY_ID_MIN}-${CITY_ID_MAX}] with countryId in [${COUNTRY_ID_MIN}-${COUNTRY_ID_MAX}]. Ensure countries/cities seed ran.`
-    );
-  }
-
+async function createTripsWithItineraryAndPlaces() {
   const specs: SeedTripSpec[] = [
     {
       name: "Alpine Adventure",
@@ -107,140 +102,66 @@ async function createTripsWithStopsAndActivities() {
         })
         .returning();
 
-      // choose 3-4 distinct cities for stops
-      const stopCount = 3 + Math.floor(Math.random() * 2); // 3-4
-      const selectedCities: typeof candidateCities = [];
-      const pickedIds = new Set<number>();
-      while (
-        selectedCities.length < stopCount &&
-        pickedIds.size < candidateCities.length
-      ) {
-        const city = pick(candidateCities);
-        if (!pickedIds.has(city.id)) {
-          pickedIds.add(city.id);
-          selectedCities.push(city);
-        }
-      }
-
-      // space stops evenly across trip dates
-      const tripDurationDays = Math.max(
-        1,
-        Math.ceil(
-          (spec.endDate.getTime() - spec.startDate.getTime()) /
-            (1000 * 60 * 60 * 24)
-        )
-      );
-      const gap = Math.max(
-        2,
-        Math.floor(tripDurationDays / (selectedCities.length + 1))
-      );
-
-      const stopRows = [] as {
-        id: string;
-        tripId: string;
-        countryId: number;
-        cityId: number;
-        budget: number | null;
-        stopOrder: number;
-        arrivalDate: string;
-        departureDate: string;
-        notes: string | null;
-        updatedAt: Date;
-      }[];
-
-      for (let i = 0; i < selectedCities.length; i++) {
-        const city = selectedCities[i];
-        const id = nanoid();
-        const arrival = new Date(spec.startDate);
-        arrival.setUTCDate(arrival.getUTCDate() + i * gap);
-        const departure = new Date(arrival);
-        departure.setUTCDate(
-          departure.getUTCDate() + Math.max(2, Math.floor(gap * 0.8))
-        );
-
-        stopRows.push({
-          id,
+      // Generate daily itinerary entries
+      const itineraryEntries = [];
+      const currentDate = new Date(spec.startDate);
+      
+      while (currentDate <= spec.endDate) {
+        itineraryEntries.push({
           tripId: trip.id,
-          countryId: city.countryId!,
-          cityId: city.id,
-          budget: Math.round((500 + Math.random() * 700) * 100) / 100,
-          stopOrder: (i + 1) * 100,
-          arrivalDate: toDateOnly(arrival),
-          departureDate: toDateOnly(departure),
-          notes: null,
-          updatedAt: new Date(),
+          date: toDateOnly(currentDate),
+          notes: Math.random() < 0.3 ? "Explore and enjoy!" : null,
         });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
       }
-
-      const insertedStops = await tx
-        .insert(tripStops)
-        .values(stopRows)
+      
+      const insertedItinerary = await tx
+        .insert(tripItinerary)
+        .values(itineraryEntries)
         .returning();
 
-      // activities for each stop
-      for (const s of insertedStops) {
-        const activitiesToCreate: {
-          tripStopId: string;
-          activityCategory:
-            | "sightseeing"
-            | "food"
-            | "entertainment"
-            | "adventure"
-            | "culture"
-            | "shopping"
-            | "relaxation"
-            | "transportation"
-            | "accommodation"
-            | "other";
-          activityName: string;
-          scheduledDate: Date | null;
-          actualCost: number | null;
-          notes: string | null;
-          updatedAt: Date;
-        }[] = [];
-
-        const categories = [
-          "sightseeing",
-          "food",
-          "adventure",
-          "culture",
-          "relaxation",
-        ] as const;
-        const chosen = new Set<string>();
-        while (chosen.size < 3) {
-          chosen.add(pick(categories as unknown as string[]));
+      // Add sample places to some days
+      for (let i = 0; i < insertedItinerary.length; i++) {
+        const day = insertedItinerary[i];
+        
+        // Add 2-4 places per day, but not every day
+        if (Math.random() < 0.7) { // 70% chance of having places
+          const placeCount = 2 + Math.floor(Math.random() * 3); // 2-4 places
+          const placesToCreate = [];
+          
+          for (let j = 0; j < placeCount; j++) {
+            const placeTypes = Object.keys(PLACE_PRESETS);
+            const selectedType = pick(placeTypes);
+            const possibleNames = PLACE_PRESETS[selectedType];
+            const placeName = pick(possibleNames);
+            
+            // Generate realistic times throughout the day
+            const hours = 8 + Math.floor(Math.random() * 12); // 8 AM to 8 PM
+            const minutes = Math.floor(Math.random() * 4) * 15; // 0, 15, 30, 45
+            const time = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            
+            placesToCreate.push({
+              tripItineraryId: day.id,
+              name: placeName,
+              type: selectedType,
+              description: Math.random() < 0.5 ? "A wonderful place to visit" : null,
+              time: time,
+              notes: Math.random() < 0.3 ? "Don't forget to take photos!" : null,
+            });
+          }
+          
+          if (placesToCreate.length > 0) {
+            await tx.insert(tripPlaces).values(placesToCreate);
+          }
         }
-
-        let dayOffset = 0;
-        for (const cat of chosen) {
-          const presets = ACTIVITY_PRESETS[cat] ?? ["Explore local spots"];
-          const name = pick(presets);
-          const when = new Date(s.arrivalDate!);
-          when.setUTCDate(when.getUTCDate() + dayOffset);
-          dayOffset += 1;
-
-          activitiesToCreate.push({
-            tripStopId: s.id,
-            activityCategory: cat as any,
-            activityName: name,
-            scheduledDate: when,
-            actualCost:
-              Math.random() < 0.5
-                ? null
-                : Math.round((15 + Math.random() * 60) * 100) / 100,
-            notes: null,
-            updatedAt: new Date(),
-          });
-        }
-
-        await tx.insert(tripStopActivities).values(activitiesToCreate);
       }
     });
   }
 }
 
 async function seed() {
-  console.log("🌱 Seeding database (trips, stops, activities)...");
+  console.log("🌱 Seeding database (trips, itinerary, places)...");
   try {
     // Ensure the target user exists to satisfy FK constraints
     const existing = await db.select().from(users).where(eq(users.id, USER_ID));
@@ -255,7 +176,7 @@ async function seed() {
       });
     }
 
-    await createTripsWithStopsAndActivities();
+    await createTripsWithItineraryAndPlaces();
     console.log("✅ Database seeded successfully!");
   } catch (error) {
     console.error("❌ Error seeding database:", error);
