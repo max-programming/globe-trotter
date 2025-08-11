@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { format } from "date-fns";
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Loader2,
   X,
+  GripVertical,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -60,6 +61,7 @@ interface TripPlannerPageProps {
 }
 
 export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
+  const queryClient = useQueryClient();
   const [expandedDays, setExpandedDays] = useState<Set<number>>(new Set());
   const [daySearchQueries, setDaySearchQueries] = useState<
     Record<number, string>
@@ -108,6 +110,24 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     // Compute new order
     const reordered = arrayMove(day.places, oldIndex, newIndex);
 
+    // Optimistic UI update in cache
+    queryClient.setQueryData(["trips", tripId, "itinerary"], (prev: any) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      next.itinerary = prev.itinerary.map((d: any) =>
+        d.id === day.id
+          ? {
+              ...d,
+              places: reordered.map((p: any, idx: number) => ({
+                ...p,
+                sortOrder: idx,
+              })),
+            }
+          : d
+      );
+      return next;
+    });
+
     // Persist each item's sortOrder to avoid duplicates
     try {
       await Promise.all(
@@ -149,9 +169,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
         <button
           type="button"
           onClick={onClick}
-          className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
           aria-label={`View ${place.placeDetails?.name || place.name}`}
         >
+          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
           <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
             {index + 1}
           </div>
@@ -738,56 +759,22 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                   <h4 className="font-medium text-sm">
                                     Planned Places
                                   </h4>
-                                  {day.places.map(
-                                    (place: any, placeIndex: number) => (
-                                      <div
-                                        key={place.id}
-                                        className="p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors"
-                                      >
-                                        <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
-                                          {placeIndex + 1}
-                                        </div>
-                                        <div className="flex-1">
-                                          <div className="flex items-center space-x-2">
-                                            <h5 className="font-medium text-sm">
-                                              {place.placeDetails?.name ||
-                                                place.name ||
-                                                "Unknown Place"}
-                                            </h5>
-                                            {place.scheduledTime && (
-                                              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                                <Clock className="w-3 h-3" />
-                                                <span>
-                                                  {place.scheduledTime}
-                                                </span>
-                                              </div>
-                                            )}
-                                          </div>
-                                          {place.placeDetails
-                                            ?.formattedAddress && (
-                                            <p className="text-xs text-muted-foreground">
-                                              {
-                                                place.placeDetails
-                                                  .formattedAddress
-                                              }
-                                            </p>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {place.userRating && (
-                                            <div className="flex items-center space-x-1">
-                                              <Star className="w-3 h-3 text-yellow-500" />
-                                              <span className="text-xs">
-                                                {place.userRating}
-                                              </span>
-                                            </div>
-                                          )}
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-7 w-7"
-                                            aria-label="View on map"
-                                            onClick={() => {
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(e) => handleDragEnd(day, e)}
+                                  >
+                                    <SortableContext
+                                      items={day.places.map((p: any) => p.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      {day.places.map(
+                                        (place: any, placeIndex: number) => (
+                                          <SortablePlaceCard
+                                            key={place.id}
+                                            place={place}
+                                            index={placeIndex}
+                                            onClick={() =>
                                               setSelectedPlace({
                                                 place_id: place.placeId,
                                                 main_text:
@@ -799,15 +786,13 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                                     ?.formattedAddress || "",
                                                 secondary_text: "",
                                                 types: [],
-                                              });
-                                            }}
-                                          >
-                                            <MapPin className="w-4 h-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )
-                                  )}
+                                              })
+                                            }
+                                          />
+                                        )
+                                      )}
+                                    </SortableContext>
+                                  </DndContext>
                                 </div>
                               ) : (
                                 <div className="text-center py-4 text-muted-foreground">
