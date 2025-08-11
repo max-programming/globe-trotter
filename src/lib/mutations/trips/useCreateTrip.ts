@@ -18,7 +18,7 @@ export function useCreateTrip(form: UseFormReturn<CreateTripFormData>) {
     onSuccess: (trip) => {
       queryClient.invalidateQueries({ queryKey: ["trips"] });
       form.reset();
-      navigate({ to: `/trips/activities/${trip.id}` });
+      navigate({ to: `/trips/${trip.id}` });
     },
     onError: (error: Error) => {
       form.setError("root", {

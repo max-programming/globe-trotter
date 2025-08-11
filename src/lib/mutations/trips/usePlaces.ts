@@ -9,11 +9,10 @@ export function useCreatePlace() {
   return useMutation({
     mutationFn: async (data: {
       tripItineraryId: number;
-      name: string;
-      type: string;
-      description?: string;
-      time?: string;
-      notes?: string;
+      placeId: string; // Google Place ID
+      scheduledTime?: string; // HH:MM format
+      userNotes?: string;
+      visitDuration?: number; // in minutes
     }) => {
       return await createPlaceFn({ data });
     },
@@ -33,12 +32,12 @@ export function useUpdatePlace() {
 
   return useMutation({
     mutationFn: async (data: {
-      placeId: number;
-      name?: string;
-      type?: string;
-      description?: string;
-      time?: string;
-      notes?: string;
+      tripPlaceId: number; // ID of the tripPlaces record
+      scheduledTime?: string;
+      userNotes?: string;
+      visitDuration?: number;
+      isVisited?: boolean;
+      userRating?: number; // 1-5 stars
     }) => {
       return await updatePlaceFn({ data });
     },
@@ -56,7 +55,7 @@ export function useDeletePlace() {
   const deletePlaceFn = useServerFn(deletePlace);
 
   return useMutation({
-    mutationFn: async (data: { placeId: number }) => {
+    mutationFn: async (data: { tripPlaceId: number }) => {
       return await deletePlaceFn({ data });
     },
     onSuccess: () => {

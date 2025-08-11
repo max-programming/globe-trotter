@@ -79,7 +79,7 @@ export const places = pgTable(
     longitude: t.doublePrecision(),
     countryCode: t.text(),
     countryName: t.text(),
-    administrativeLevels: t.jsonb(),
+    administrativeLevels: t.jsonb().$type<any | null>(),
     timezone: t.text(),
     photoReference: t.text(),
     createdAt: t
@@ -112,6 +112,7 @@ export const trips = pgTable(
       .$defaultFn(() => nanoid()),
     name: t.text().notNull(),
     description: t.text(),
+    notes: t.text(), // User's personal notes about the trip
     startDate: t.timestamp(),
     endDate: t.timestamp(),
     coverImageUrl: t.text(),
@@ -181,11 +182,12 @@ export const tripPlaces = pgTable(
       .text()
       .notNull()
       .references(() => places.placeId, { onDelete: "restrict" }),
-    name: t.text().notNull(),
-    type: t.text().notNull(),
-    description: t.text(),
-    time: t.time(),
-    notes: t.text(),
+    // User-specific fields for this place in their itinerary
+    scheduledTime: t.time(),
+    userNotes: t.text(),
+    isVisited: t.boolean().default(false).notNull(),
+    userRating: t.integer(), // 1-5 stars
+    visitDuration: t.integer(), // in minutes
     createdAt: t
       .timestamp()
       .$defaultFn(() => new Date())
@@ -200,6 +202,9 @@ export const tripPlaces = pgTable(
       table.tripItineraryId
     ),
     placeIdx: index("trip_places_place_idx").on(table.placeId),
+    scheduledTimeIdx: index("trip_places_scheduled_time_idx").on(
+      table.scheduledTime
+    ),
   })
 );
 
