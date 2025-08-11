@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
 import { Link } from "@tanstack/react-router";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
@@ -121,23 +122,27 @@ export function UserTripsDisplay() {
 
       {/* Trips Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {trips.map(trip => (
+        {trips.map((trip) => (
           <Card
             key={trip.id}
-            className="shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-shadow duration-300 flex flex-col"
+            className="group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-ease overflow-hidden flex flex-col py-0"
           >
             {/* Cover Image */}
             {trip.coverImageUrl && (
-              <div className="aspect-video w-full bg-gradient-to-br from-primary-100 to-primary-200 rounded-t-xl overflow-hidden">
+              <div className="aspect-video w-full bg-gradient-to-br from-primary-100 to-primary-200 rounded-t-xl overflow-hidden group-hover:scale-105 transition-ease">
                 <img
-                  src={trip.coverImageUrl}
+                  src={
+                    trip.coverImageUrl
+                      ? trip.coverImageUrl
+                      : `https://api.dicebear.com/9.x/glass/svg?seed=${trip.name}`
+                  }
                   alt={trip.name}
                   className="w-full h-full object-cover"
                 />
               </div>
             )}
 
-            <CardHeader className="pb-3 ">
+            <CardHeader>
               <div className="flex items-start justify-between">
                 <CardTitle className="text-lg font-bold line-clamp-2 flex-1">
                   {trip.name}
@@ -150,9 +155,25 @@ export function UserTripsDisplay() {
                     {trip.status}
                   </Badge>
                   {trip.isPublic ? (
-                    <Eye className="w-4 h-4 text-green-600" />
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Eye className="w-4 h-4 text-green-600 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-white">This trip is public</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
                   ) : (
-                    <EyeOff className="w-4 h-4 text-gray-400" />
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <EyeOff className="w-4 h-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-white">This trip is private</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </div>
               </div>
@@ -164,7 +185,7 @@ export function UserTripsDisplay() {
               )}
             </CardHeader>
 
-            <CardContent className="space-y-3 flex flex-col flex-1">
+            <CardContent className="space-y-3 flex flex-col flex-1 pb-4">
               {/* Dates */}
               {(trip.startDate || trip.endDate) && (
                 <div className="flex items-center space-x-2 text-sm">
@@ -200,7 +221,7 @@ export function UserTripsDisplay() {
 
               {/* Action Button */}
               <div className="pt-2 mt-auto">
-                <Button className="w-full" variant="outline">
+                <Button className="w-full cursor-pointer" variant="outline">
                   View Trip
                 </Button>
               </div>
@@ -236,7 +257,7 @@ export function UserTripsSkeleton() {
               <Skeleton className="w-full h-full rounded-t-xl" />
             </div>
 
-            <CardHeader className="pb-3">
+            <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-6 w-3/4" />
