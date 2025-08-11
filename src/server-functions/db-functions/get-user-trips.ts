@@ -1,15 +1,14 @@
-import { eq } from "drizzle-orm";
-import { db, trips } from "~/lib/db";
+import { eq, count, getTableColumns } from "drizzle-orm";
+import { db, trips, tripStops } from "~/lib/db";
 
 export async function getUserTrips(userId: string) {
-  return db.query.trips.findMany({
-    where: eq(trips.userId, userId),
-    with: {
-      tripStops: {
-        with: {
-          activities: true,
-        },
-      },
-    },
-  });
+  return db
+    .select({
+      ...getTableColumns(trips),
+      tripStopsCount: count(tripStops.id),
+    })
+    .from(trips)
+    .where(eq(trips.userId, userId))
+    .leftJoin(tripStops, eq(trips.id, tripStops.tripId))
+    .groupBy(trips.id);
 }

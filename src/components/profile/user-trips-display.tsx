@@ -64,8 +64,8 @@ export function UserTripsDisplay() {
             size="sm"
             className="bg-gradient-to-r from-primary-500 to-primary-600"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Trip
+            <Plus className="w-4 h-4" />
+            New Trip
           </Button>
         </div>
 
@@ -105,8 +105,8 @@ export function UserTripsDisplay() {
           size="sm"
           className="bg-gradient-to-r from-primary-500 to-primary-600"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Trip
+          <Plus className="w-4 h-4" />
+          New Trip
         </Button>
       </div>
 
@@ -179,12 +179,12 @@ export function UserTripsDisplay() {
               )}
 
               {/* Trip Stops */}
-              {trip.tripStops && trip.tripStops.length > 0 && (
+              {trip.tripStopsCount > 0 && (
                 <div className="flex items-center space-x-2 text-sm">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span className="text-muted-foreground">
-                    {trip.tripStops.length} stop
-                    {trip.tripStops.length !== 1 ? "s" : ""}
+                    {trip.tripStopsCount} stop
+                    {trip.tripStopsCount !== 1 ? "s" : ""}
                   </span>
                 </div>
               )}
