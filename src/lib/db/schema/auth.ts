@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { pgTable } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", t => ({
@@ -8,6 +9,10 @@ export const users = pgTable("users", t => ({
     .boolean()
     .$defaultFn(() => !1)
     .notNull(),
+  phone: t.text(),
+  city: t.text(),
+  country: t.text(),
+  additionalInfo: t.text(),
   image: t.text(),
   createdAt: t
     .timestamp()
@@ -59,4 +64,23 @@ export const verifications = pgTable("verifications", t => ({
   expiresAt: t.timestamp().notNull(),
   createdAt: t.timestamp().$defaultFn(() => new Date()),
   updatedAt: t.timestamp().$defaultFn(() => new Date()),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  accounts: many(accounts),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [accounts.userId],
+    references: [users.id],
+  }),
 }));

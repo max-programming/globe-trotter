@@ -1,9 +1,9 @@
 services:
   postgres:
     image: postgres:alpine
-    container_name: unnamed_postgres
+    container_name: globe_trotter_postgres
     environment:
-      POSTGRES_DB: unnamed 
+      POSTGRES_DB: globe_trotter
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:

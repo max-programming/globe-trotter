@@ -1,4 +1,4 @@
-# unnamed
+# globe-trotter
 
 To install dependencies:
 
