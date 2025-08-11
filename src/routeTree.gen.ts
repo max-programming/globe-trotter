@@ -21,6 +21,7 @@ import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
 import { Route as protectedTripsTripIdRouteImport } from './routes/(protected)/trips/$tripId'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
+import { Route as protectedRecommendationsRecommendationIdRouteImport } from './routes/(protected)/recommendations/$recommendationId'
 import { ServerRoute as ApiPlacesAutocompleteServerRouteImport } from './routes/api/places/autocomplete'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
@@ -75,6 +76,12 @@ const protectedSettingsProfileRoute =
     path: '/settings/profile',
     getParentRoute: () => protectedRouteRoute,
   } as any)
+const protectedRecommendationsRecommendationIdRoute =
+  protectedRecommendationsRecommendationIdRouteImport.update({
+    id: '/recommendations/$recommendationId',
+    path: '/recommendations/$recommendationId',
+    getParentRoute: () => protectedRouteRoute,
+  } as any)
 const ApiPlacesAutocompleteServerRoute =
   ApiPlacesAutocompleteServerRouteImport.update({
     id: '/api/places/autocomplete',
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
+  '/recommendations/$recommendationId': typeof protectedRecommendationsRecommendationIdRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
@@ -103,6 +111,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
+  '/recommendations/$recommendationId': typeof protectedRecommendationsRecommendationIdRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/(protected)/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
   '/(protected)/': typeof protectedIndexRoute
+  '/(protected)/recommendations/$recommendationId': typeof protectedRecommendationsRecommendationIdRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
   '/(protected)/trips/$tripId': typeof protectedTripsTripIdRoute
   '/(protected)/trips/new': typeof protectedTripsNewRoute
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/profile'
     | '/view/$shareId'
+    | '/recommendations/$recommendationId'
     | '/settings/profile'
     | '/trips/$tripId'
     | '/trips/new'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/profile'
     | '/view/$shareId'
+    | '/recommendations/$recommendationId'
     | '/settings/profile'
     | '/trips/$tripId'
     | '/trips/new'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
     | '/(protected)/profile'
     | '/view/$shareId'
     | '/(protected)/'
+    | '/(protected)/recommendations/$recommendationId'
     | '/(protected)/settings/profile'
     | '/(protected)/trips/$tripId'
     | '/(protected)/trips/new'
@@ -258,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof protectedSettingsProfileRouteImport
       parentRoute: typeof protectedRouteRoute
     }
+    '/(protected)/recommendations/$recommendationId': {
+      id: '/(protected)/recommendations/$recommendationId'
+      path: '/recommendations/$recommendationId'
+      fullPath: '/recommendations/$recommendationId'
+      preLoaderRoute: typeof protectedRecommendationsRecommendationIdRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
   }
 }
 declare module '@tanstack/react-start/server' {
@@ -296,6 +316,7 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 interface protectedRouteRouteChildren {
   protectedProfileRoute: typeof protectedProfileRoute
   protectedIndexRoute: typeof protectedIndexRoute
+  protectedRecommendationsRecommendationIdRoute: typeof protectedRecommendationsRecommendationIdRoute
   protectedSettingsProfileRoute: typeof protectedSettingsProfileRoute
   protectedTripsTripIdRoute: typeof protectedTripsTripIdRoute
   protectedTripsNewRoute: typeof protectedTripsNewRoute
@@ -304,6 +325,8 @@ interface protectedRouteRouteChildren {
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
   protectedProfileRoute: protectedProfileRoute,
   protectedIndexRoute: protectedIndexRoute,
+  protectedRecommendationsRecommendationIdRoute:
+    protectedRecommendationsRecommendationIdRoute,
   protectedSettingsProfileRoute: protectedSettingsProfileRoute,
   protectedTripsTripIdRoute: protectedTripsTripIdRoute,
   protectedTripsNewRoute: protectedTripsNewRoute,

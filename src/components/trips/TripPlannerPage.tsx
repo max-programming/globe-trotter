@@ -194,7 +194,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h5 className="font-medium text-sm">
-                {place.placeDetails?.name || place.name || "Unknown Place"}
+                {place.place?.name || "Unknown Place"}
               </h5>
               {place.scheduledTime && (
                 <div className="flex items-center space-x-1 text-xs text-muted-foreground">
@@ -203,14 +203,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                 </div>
               )}
             </div>
-            {place.placeDetails?.formattedAddress && (
+            {place.place?.formattedAddress && (
               <p className="text-xs text-muted-foreground">
-                {place.placeDetails.formattedAddress}
+                {place.place.formattedAddress}
               </p>
             )}
-            {place.placeDetails?.secondaryText && (
+            {place.place?.secondaryText && (
               <p className="text-xs text-muted-foreground line-clamp-2">
-                {place.placeDetails.secondaryText}
+                {place.place.secondaryText}
               </p>
             )}
           </div>

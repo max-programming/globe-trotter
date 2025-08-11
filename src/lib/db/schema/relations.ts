@@ -8,6 +8,8 @@ import {
   tripItinerary,
   tripPlaces,
   sharedTrips,
+  recommendedTrips,
+  recommendedTripActivities,
 } from "./travel";
 
 // Country relations
@@ -29,6 +31,8 @@ export const citiesRelations = relations(cities, ({ one, many }) => ({
 export const placesRelations = relations(places, ({ many }) => ({
   trips: many(trips),
   tripPlaces: many(tripPlaces),
+  recommendedTrips: many(recommendedTrips),
+  recommendedTripActivities: many(recommendedTripActivities),
 }));
 
 // Trip relations
@@ -46,13 +50,16 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
 }));
 
 // Trip itinerary relations
-export const tripItineraryRelations = relations(tripItinerary, ({ one, many }) => ({
-  trip: one(trips, {
-    fields: [tripItinerary.tripId],
-    references: [trips.id],
-  }),
-  places: many(tripPlaces),
-}));
+export const tripItineraryRelations = relations(
+  tripItinerary,
+  ({ one, many }) => ({
+    trip: one(trips, {
+      fields: [tripItinerary.tripId],
+      references: [trips.id],
+    }),
+    places: many(tripPlaces),
+  })
+);
 
 // Trip places relations
 export const tripPlacesRelations = relations(tripPlaces, ({ one }) => ({
@@ -73,3 +80,34 @@ export const sharedTripsRelations = relations(sharedTrips, ({ one }) => ({
     references: [trips.id],
   }),
 }));
+
+// Recommended trips relations
+export const recommendedTripsRelations = relations(
+  recommendedTrips,
+  ({ one, many }) => ({
+    user: one(users, {
+      fields: [recommendedTrips.userId],
+      references: [users.id],
+    }),
+    activities: many(recommendedTripActivities),
+    place: one(places, {
+      fields: [recommendedTrips.placeId],
+      references: [places.placeId],
+    }),
+  })
+);
+
+// Recommended trip activities relations
+export const recommendedTripActivitiesRelations = relations(
+  recommendedTripActivities,
+  ({ one }) => ({
+    recommendedTrip: one(recommendedTrips, {
+      fields: [recommendedTripActivities.recommendedTripId],
+      references: [recommendedTrips.id],
+    }),
+    place: one(places, {
+      fields: [recommendedTripActivities.placeId],
+      references: [places.placeId],
+    }),
+  })
+);
