@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -8,14 +7,11 @@ import { Skeleton } from "~/components/ui/skeleton";
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Edit,
-  Settings,
   Globe,
   MessageSquare,
-  Camera,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
@@ -24,6 +20,7 @@ import {
   getCitiesByCountryQuery,
 } from "~/lib/queries/countries-and-cities";
 import { UserTripsDisplay, UserTripsSkeleton } from "./user-trips-display";
+import { Suspense } from "react";
 
 export function UserProfileDisplay() {
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
