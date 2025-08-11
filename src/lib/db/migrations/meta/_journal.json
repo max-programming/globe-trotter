@@ -15,6 +15,13 @@
       "when": 1754886643765,
       "tag": "0001_organic_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754894679162,
+      "tag": "0002_real_black_cat",
+      "breakpoints": true
     }
   ]
 }
