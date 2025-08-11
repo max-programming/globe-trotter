@@ -8,6 +8,7 @@ export const getSession = createServerFn({ method: "GET" }).handler(
   async () => {
     const { headers } = getWebRequest();
     const session = await auth.api.getSession({ headers });
+    console.log(session);
     return session;
   }
 );
@@ -40,3 +41,8 @@ export const signUp = createServerFn({ method: "POST" })
 
     await updateUserPostSignUp(user.id, data);
   });
+
+export const signOut = createServerFn({ method: "POST" }).handler(async () => {
+  const { headers } = getWebRequest();
+  await auth.api.signOut({ headers });
+});
