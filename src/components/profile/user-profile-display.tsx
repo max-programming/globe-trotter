@@ -26,14 +26,14 @@ import { getUserTripsQuery } from "~/lib/queries/trips";
 
 export function UserProfileDisplay() {
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
-  const { data: trips } = useQuery(getUserTripsQuery);
+  // const { data: trips } = useQuery(getUserTripsQuery);
   const initialValue = 0;
-  const totalCities = trips?.reduce((acc, tripCount) => {
-    return acc + tripCount.tripStopCities;
-  }, initialValue);
-  const totalCountries = trips?.reduce((acc, tripCount) => {
-    return acc + tripCount.tripStopCountries;
-  }, initialValue);
+  // const totalCities = trips?.reduce((acc, tripCount) => {
+  //   return acc + tripCount.tripStopCities;
+  // }, initialValue);
+  // const totalCountries = trips?.reduce((acc, tripCount) => {
+  //   return acc + tripCount.tripStopCountries;
+  // }, initialValue);
 
   // Fetch countries and cities for display names
   const { data: countries = [] } = useQuery(getCountriesQuery);
@@ -216,21 +216,15 @@ export function UserProfileDisplay() {
             <CardContent className="pt-0">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">
-                    {trips?.length}
-                  </p>
+                  <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-xs text-muted-foreground">Trips</p>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">
-                    {totalCountries}
-                  </p>
+                  <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-xs text-muted-foreground">Countries</p>
                 </div>
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">
-                    {totalCities}
-                  </p>
+                  <p className="text-2xl font-bold text-primary">0</p>
                   <p className="text-xs text-muted-foreground">Cities</p>
                 </div>
               </div>
