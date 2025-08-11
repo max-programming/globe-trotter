@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -8,14 +7,11 @@ import { Skeleton } from "~/components/ui/skeleton";
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   Edit,
-  Settings,
   Globe,
   MessageSquare,
-  Camera,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
@@ -23,7 +19,8 @@ import {
   getCountriesQuery,
   getCitiesByCountryQuery,
 } from "~/lib/queries/countries-and-cities";
-import { cn } from "~/lib/utils";
+import { UserTripsDisplay, UserTripsSkeleton } from "./user-trips-display";
+import { Suspense } from "react";
 
 export function UserProfileDisplay() {
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
@@ -31,7 +28,7 @@ export function UserProfileDisplay() {
   // Fetch countries and cities for display names
   const { data: countries = [] } = useQuery(getCountriesQuery);
   const { data: cities = [] } = useQuery(
-    getCitiesByCountryQuery(currentUser?.countryId)
+    getCitiesByCountryQuery(currentUser?.countryId ?? undefined)
   );
 
   if (!currentUser) {
@@ -252,18 +249,11 @@ export function UserProfileDisplay() {
         </div>
       </div>
 
-      {/* Future Content Section - Placeholder for trips, reviews, etc. */}
+      {/* Trips Section */}
       <div className="space-y-6">
-        <div className="text-center py-12 bg-muted/30 rounded-2xl border-2 border-dashed border-muted-foreground/20">
-          <Globe className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-            Your Travel Journey Awaits
-          </h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            This space will showcase your trips, reviews, photos, and travel
-            achievements as you explore the world with Globe Trotter.
-          </p>
-        </div>
+        <Suspense fallback={<UserTripsSkeleton />}>
+          <UserTripsDisplay />
+        </Suspense>
       </div>
     </div>
   );

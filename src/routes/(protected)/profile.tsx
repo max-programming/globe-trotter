@@ -5,11 +5,16 @@ import {
   UserProfileSkeleton,
 } from "~/components/profile/user-profile-display";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
+import { getUserTripsQuery } from "~/lib/queries/trips";
 
 export const Route = createFileRoute("/(protected)/profile")({
   component: ProfilePage,
+  head: () => ({
+    meta: [{ title: "Profile | Globe Trotter" }],
+  }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(getCurrentUserQuery);
+    context.queryClient.ensureQueryData(getUserTripsQuery);
   },
 });
 
