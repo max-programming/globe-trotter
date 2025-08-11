@@ -7,8 +7,11 @@ export const createTripSchema = z
     endDate: z.date(),
     countryId: z.number({ message: "Please select a country" }),
     coverImageUrl: z
-      .union([z.string().url({ message: "Invalid URL" }), z.literal("")])
-      .optional()
+      .union([
+        z.string().url({ message: "Invalid URL" }),
+        z.undefined(),
+        z.literal(""),
+      ])
       .transform((v) => (v === "" ? undefined : v)),
     totalBudget: z
       .number()
