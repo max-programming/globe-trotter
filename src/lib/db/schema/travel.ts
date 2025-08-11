@@ -64,6 +64,40 @@ export const cities = pgTable(
   })
 );
 
+export const places = pgTable(
+  "places",
+  t => ({
+    id: t.serial().primaryKey(),
+    placeId: t.text().notNull().unique(),
+    name: t.text().notNull(),
+    formattedAddress: t.text().notNull(),
+    mainText: t.text().notNull(),
+    secondaryText: t.text(),
+    placeTypes: t.text().array(),
+    latitude: t.doublePrecision(),
+    longitude: t.doublePrecision(),
+    countryCode: t.text(),
+    countryName: t.text(),
+    administrativeLevels: t.jsonb(),
+    timezone: t.text(),
+    photoReference: t.text(),
+    createdAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  table => ({
+    placeIdIdx: index("places_place_id_idx").on(table.placeId),
+    countryCodeIdx: index("places_country_code_idx").on(table.countryCode),
+    placeTypesIdx: index("places_place_types_idx").on(table.placeTypes),
+    nameIdx: index("places_name_idx").on(table.name),
+  })
+);
+
 // Enums for better type safety and data integrity
 export const tripStatusEnum = pgEnum("trip_status", tripStatuses);
 
@@ -83,7 +117,11 @@ export const trips = pgTable(
     status: tripStatusEnum().default("draft").notNull(),
     totalBudget: t.doublePrecision(),
     isPublic: t.boolean().default(false).notNull(),
-
+    placeId: t
+      .text()
+      .references(() => places.placeId, { onDelete: "set null" }),
+    destinationName: t.text(),
+    destinationImageUrl: t.text(),
     userId: t
       .text()
       .notNull()

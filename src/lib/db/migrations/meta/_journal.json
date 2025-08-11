@@ -29,6 +29,13 @@
       "when": 1754898909303,
       "tag": "0003_seed_countries_cities",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754931246572,
+      "tag": "0004_bored_joystick",
+      "breakpoints": true
     }
   ]
 }
