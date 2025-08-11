@@ -14,6 +14,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as protectedRouteRouteImport } from './routes/(protected)/route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as protectedIndexRouteImport } from './routes/(protected)/index'
+import { Route as ViewShareIdRouteImport } from './routes/view.$shareId'
 import { Route as protectedProfileRouteImport } from './routes/(protected)/profile'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
@@ -37,6 +38,11 @@ const protectedIndexRoute = protectedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => protectedRouteRoute,
+} as any)
+const ViewShareIdRoute = ViewShareIdRouteImport.update({
+  id: '/view/$shareId',
+  path: '/view/$shareId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const protectedProfileRoute = protectedProfileRouteImport.update({
   id: '/profile',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
+  '/view/$shareId': typeof ViewShareIdRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
+  '/view/$shareId': typeof ViewShareIdRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
   '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(protected)/profile': typeof protectedProfileRoute
+  '/view/$shareId': typeof ViewShareIdRoute
   '/(protected)/': typeof protectedIndexRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
   '/(protected)/trips/$tripId': typeof protectedTripsTripIdRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/profile'
+    | '/view/$shareId'
     | '/settings/profile'
     | '/trips/$tripId'
     | '/trips/new'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/profile'
+    | '/view/$shareId'
     | '/settings/profile'
     | '/trips/$tripId'
     | '/trips/new'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(protected)/profile'
+    | '/view/$shareId'
     | '/(protected)/'
     | '/(protected)/settings/profile'
     | '/(protected)/trips/$tripId'
@@ -146,6 +158,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   authRouteRoute: typeof authRouteRouteWithChildren
   protectedRouteRoute: typeof protectedRouteRouteWithChildren
+  ViewShareIdRoute: typeof ViewShareIdRoute
 }
 export interface FileServerRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatServerRoute
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof protectedIndexRouteImport
       parentRoute: typeof protectedRouteRoute
+    }
+    '/view/$shareId': {
+      id: '/view/$shareId'
+      path: '/view/$shareId'
+      fullPath: '/view/$shareId'
+      preLoaderRoute: typeof ViewShareIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/(protected)/profile': {
       id: '/(protected)/profile'
@@ -296,6 +316,7 @@ const protectedRouteRouteWithChildren = protectedRouteRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   authRouteRoute: authRouteRouteWithChildren,
   protectedRouteRoute: protectedRouteRouteWithChildren,
+  ViewShareIdRoute: ViewShareIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
