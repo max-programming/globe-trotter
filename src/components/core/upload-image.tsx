@@ -1,5 +1,11 @@
 import { useState, useCallback, useRef } from "react";
-import { SearchIcon, UploadIcon, ImageIcon, XIcon } from "lucide-react";
+import {
+  SearchIcon,
+  UploadIcon,
+  ImageIcon,
+  XIcon,
+  CheckIcon,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +50,9 @@ const UploadImage = ({
   const [debouncedQuery] = useDebounceValue(searchQuery, 500);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImageSelectionData | null>(
+    null
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = useCallback((file: File) => {
@@ -89,14 +98,25 @@ const UploadImage = ({
     [handleFileUpload]
   );
 
-  const handleImageSelection = useCallback(
-    (image: ImageSelectionData) => {
-      setIsOpen(false);
-      setUploadedImage(null);
-      setSearchQuery("");
-      onImageSelect?.(image);
+  const handleImageSelect = useCallback((image: ImageSelectionData) => {
+    setSelectedImage(image);
+  }, []);
+
+  const handleSaveSelection = useCallback(() => {
+    if (selectedImage) {
+      onImageSelect?.(selectedImage);
+    }
+    setIsOpen(false);
+    setUploadedImage(null);
+    setSearchQuery("");
+    setSelectedImage(null);
+  }, [selectedImage, onImageSelect]);
+
+  const isImageSelected = useCallback(
+    (imageUrl: string) => {
+      return selectedImage?.url === imageUrl;
     },
-    [onImageSelect]
+    [selectedImage]
   );
 
   const { data: imageResult, isLoading: isLoadingImages } = useQuery(
@@ -111,12 +131,16 @@ const UploadImage = ({
           {btnText}
         </Button>
       </DialogTrigger>
-      <DialogContent className="!max-w-[80vw] w-full h-full flex flex-col max-h-[80vh] overflow-hidden">
+      <DialogContent className="!max-w-[60vw] w-full flex flex-col max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Select an Image</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full flex-1 flex flex-col overflow-hidden"
+        >
           <TabsList className="grid w-full grid-cols-2 m-1">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <UploadIcon className="w-4 h-4" />
@@ -128,7 +152,10 @@ const UploadImage = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upload" className="space-y-4">
+          <TabsContent
+            value="upload"
+            className="space-y-4 flex-1 overflow-auto"
+          >
             <div
               className={cn(
                 "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
@@ -172,14 +199,20 @@ const UploadImage = ({
                     <Button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleImageSelection({
+                        const uploadImage = {
                           url: uploadedImage,
-                          source: "upload",
-                        });
+                          source: "upload" as const,
+                        };
+                        setSelectedImage(uploadImage);
                       }}
                       className="w-full"
+                      variant={
+                        isImageSelected(uploadedImage) ? "default" : "outline"
+                      }
                     >
-                      Use This Image
+                      {isImageSelected(uploadedImage)
+                        ? "Selected"
+                        : "Select This Image"}
                     </Button>
                   </div>
                 </div>
@@ -199,7 +232,10 @@ const UploadImage = ({
             </div>
           </TabsContent>
 
-          <TabsContent value="search" className="space-y-4">
+          <TabsContent
+            value="search"
+            className="space-y-4 flex-1 flex flex-col overflow-hidden"
+          >
             <div className="relative m-1">
               <Input
                 placeholder="Search for images..."
@@ -210,7 +246,7 @@ const UploadImage = ({
               <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
 
-            <div className="max-h-[32rem] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pt-4">
               {isLoadingImages ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {Array.from({ length: 6 }).map((_, i) => (
@@ -227,7 +263,7 @@ const UploadImage = ({
                       key={image.id}
                       className="group relative aspect-square cursor-pointer rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
                       onClick={() =>
-                        handleImageSelection({
+                        handleImageSelect({
                           url: image.url,
                           source: "pexels",
                           data: image,
@@ -239,6 +275,11 @@ const UploadImage = ({
                         alt={`Photo by ${image.photographer || "img"}`}
                         className="w-full h-full object-cover"
                       />
+                      {isImageSelected(image.url) && (
+                        <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-1">
+                          <CheckIcon className="w-4 h-4" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -254,6 +295,14 @@ const UploadImage = ({
             </div>
           </TabsContent>
         </Tabs>
+
+        {selectedImage && (
+          <div className="flex justify-end pt-4 border-t mt-4">
+            <Button onClick={handleSaveSelection} className="px-6">
+              Save Selected Image
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
