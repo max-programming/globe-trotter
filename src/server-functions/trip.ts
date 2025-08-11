@@ -83,6 +83,7 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
     const trip = await db.query.trips.findFirst({
       where: and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)),
       with: {
+        place: true,
         itinerary: {
           orderBy: [asc(tripItinerary.date)],
           with: {

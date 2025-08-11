@@ -857,9 +857,15 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(
-                    (day: any) => day.places || []
-                  )}
+                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  center={
+                    trip.place
+                      ? {
+                          lat: trip.place.latitude || 0,
+                          lng: trip.place.longitude || 0,
+                        }
+                      : undefined
+                  }
                   onPlaceSelect={place => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
