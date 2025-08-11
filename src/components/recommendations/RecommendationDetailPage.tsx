@@ -61,6 +61,9 @@ import {
   Loader2,
 } from "lucide-react";
 
+import { formatCurrency } from "~/lib/utils/currency";
+import { useRouteContext } from "@tanstack/react-router";
+
 import { getRecommendationQuery } from "~/lib/queries/recommendations";
 import {
   useMarkRecommendationViewed,
@@ -96,6 +99,10 @@ export function RecommendationDetailPage({
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+  });
+
+  const { auth } = useRouteContext({
+    from: "/(protected)/recommendations/$recommendationId",
   });
 
   const { data: recommendation } = useSuspenseQuery(
@@ -232,7 +239,10 @@ export function RecommendationDetailPage({
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">
-                      ~${recommendation.suggestedBudget.toLocaleString()}
+                      ~
+                      {formatCurrency(recommendation.suggestedBudget, {
+                        currency: auth.currencySign || "USD",
+                      })}
                     </span>
                   </div>
                 )}
@@ -409,7 +419,9 @@ export function RecommendationDetailPage({
                             {totalDuration > 0 &&
                               ` • ${Math.round(totalDuration / 60)}h`}
                             {totalCost > 0 &&
-                              ` • $${totalCost.toLocaleString()}`}
+                              ` • ${formatCurrency(totalCost, {
+                                currency: auth.currencySign || "USD",
+                              })}`}
                           </p>
                         </div>
                       </div>
@@ -466,8 +478,10 @@ export function RecommendationDetailPage({
                                   )}
                                   {activity.estimatedCost && (
                                     <div className="flex items-center gap-1">
-                                      <DollarSign className="w-3 h-3" />$
-                                      {activity.estimatedCost}
+                                      <DollarSign className="w-3 h-3" />
+                                      {formatCurrency(activity.estimatedCost, {
+                                        currency: auth.currencySign || "USD",
+                                      })}
                                     </div>
                                   )}
                                   {activity.placeName && (

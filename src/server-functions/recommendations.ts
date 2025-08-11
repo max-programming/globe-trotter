@@ -16,6 +16,7 @@ import {
   type UserProfile,
 } from "~/lib/services/llm";
 import { searchPexelsImage } from "./pexels";
+import { searchAndGetPlaceDetails } from "./places-lookup";
 
 export const generateRecommendations = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -267,6 +268,117 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
         throw new Error("Recommendation not found");
       }
 
+      // Fetch destination image from Pexels if not already set
+      let destinationImageUrl = recommendation.destinationImageUrl;
+      if (!destinationImageUrl && recommendation.destinationName) {
+        try {
+          const pexelsResult = await searchPexelsImage({
+            data: { query: recommendation.destinationName },
+          });
+          if (pexelsResult.success) {
+            destinationImageUrl = pexelsResult.imageUrl;
+          }
+        } catch (error) {
+          console.warn("Failed to fetch destination image:", error);
+          // Continue without image - this is non-critical
+        }
+      }
+
+      // Handle place data upsert (similar to manual trip creation)
+      let existingPlace = null;
+      let finalPlaceId = recommendation.placeId;
+
+      if (recommendation.placeId) {
+        // Check if place exists
+        existingPlace = await db.query.places.findFirst({
+          where: eq(places.placeId, recommendation.placeId),
+        });
+
+        // If place doesn't exist and we have place data from recommendation, create it
+        if (!existingPlace && recommendation.place) {
+          try {
+            [existingPlace] = await db
+              .insert(places)
+              .values({
+                placeId: recommendation.place.placeId,
+                name:
+                  recommendation.place.name || recommendation.destinationName,
+                formattedAddress:
+                  recommendation.place.formattedAddress ||
+                  recommendation.destinationName,
+                mainText:
+                  recommendation.place.mainText ||
+                  recommendation.destinationName,
+                secondaryText: recommendation.place.secondaryText || null,
+                placeTypes: recommendation.place.placeTypes || [],
+                latitude: recommendation.place.latitude,
+                longitude: recommendation.place.longitude,
+                countryCode: recommendation.place.countryCode,
+                countryName: recommendation.place.countryName,
+                administrativeLevels: recommendation.place.administrativeLevels,
+                timezone: recommendation.place.timezone,
+                photoReference: recommendation.place.photoReference,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .returning();
+          } catch (placeError) {
+            console.warn("Failed to create place record:", placeError);
+            existingPlace = null;
+          }
+        }
+      }
+
+      // If we still don't have place data, try to lookup using destination name
+      if (!existingPlace && recommendation.destinationName) {
+        try {
+          const placeSearchResult = await searchAndGetPlaceDetails({
+            data: { query: recommendation.destinationName },
+          });
+
+          if (placeSearchResult.success && placeSearchResult.placeData) {
+            const placeData = placeSearchResult.placeData;
+
+            // Check if this place already exists (avoid duplicates)
+            const existingPlaceByName = await db.query.places.findFirst({
+              where: eq(places.placeId, placeData.placeId),
+            });
+
+            if (existingPlaceByName) {
+              existingPlace = existingPlaceByName;
+              finalPlaceId = existingPlaceByName.placeId;
+            } else {
+              // Create new place record
+              [existingPlace] = await db
+                .insert(places)
+                .values({
+                  placeId: placeData.placeId,
+                  name: placeData.name,
+                  formattedAddress: placeData.formattedAddress,
+                  mainText: placeData.mainText,
+                  secondaryText: placeData.secondaryText || null,
+                  placeTypes: placeData.placeTypes,
+                  latitude: placeData.latitude,
+                  longitude: placeData.longitude,
+                  countryCode: placeData.countryCode,
+                  countryName: placeData.countryName,
+                  administrativeLevels: placeData.administrativeLevels,
+                  timezone: placeData.timezone,
+                  photoReference: placeData.photoReference,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                })
+                .returning();
+
+              finalPlaceId = placeData.placeId;
+            }
+          }
+        } catch (placeError) {
+          console.warn("Failed to lookup and create place:", placeError);
+          // Continue without place - trip can still be created
+        }
+      }
+
       // Create a new trip based on recommendation
       const [newTrip] = await db
         .insert(trips)
@@ -274,8 +386,8 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
           name: recommendation.name,
           description: recommendation.description,
           destinationName: recommendation.destinationName,
-          destinationImageUrl: recommendation.destinationImageUrl,
-          placeId: recommendation.placeId,
+          destinationImageUrl,
+          placeId: finalPlaceId,
           totalBudget: recommendation.suggestedBudget,
           startDate: data.startDate,
           endDate: data.endDate,
