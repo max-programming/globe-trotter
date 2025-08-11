@@ -3,8 +3,15 @@ import { z } from "zod";
 import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
-import { trips, places, tripPlaces, tripItinerary } from "~/lib/db/schema";
+import {
+  trips,
+  places,
+  tripPlaces,
+  tripItinerary,
+  sharedTrips,
+} from "~/lib/db/schema";
 import { eq, and, inArray, sql, asc } from "drizzle-orm";
+import { customAlphabet } from "nanoid";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -450,4 +457,93 @@ export const updateTripNotes = createServerFn({ method: "POST" })
       .returning();
 
     return updatedTrip;
+  });
+
+export const getTripWithItineraryByShareId = createServerFn({ method: "GET" })
+  .validator(z.object({ shareId: z.string() }))
+  .handler(async ({ data }) => {
+    // First, find the shared trip record to get the tripId
+    const sharedTrip = await db.query.sharedTrips.findFirst({
+      where: and(
+        eq(sharedTrips.shareToken, data.shareId),
+        eq(sharedTrips.isActive, true)
+      ),
+    });
+
+    console.log(sharedTrip);
+
+    if (!sharedTrip) {
+      throw new Error("Shared trip not found or no longer active");
+    }
+
+    // Then fetch the full trip data with itinerary (no auth check needed for public shares)
+    const trip = await db.query.trips.findFirst({
+      where: eq(trips.id, sharedTrip.tripId),
+      with: {
+        place: true,
+        itinerary: {
+          orderBy: [asc(tripItinerary.date)],
+          with: {
+            places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!trip) {
+      throw new Error("Trip not found");
+    }
+
+    // Increment view count for analytics
+    await db
+      .update(sharedTrips)
+      .set({
+        viewCount: sql`${sharedTrips.viewCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(sharedTrips.id, sharedTrip.id));
+
+    return {
+      trip: trip,
+      itinerary: trip.itinerary,
+      shareInfo: {
+        shareToken: sharedTrip.shareToken,
+        viewCount: (sharedTrip.viewCount || 0) + 1,
+        allowCopying: sharedTrip.allowCopying,
+      },
+    };
+  });
+
+export const createTripShare = createServerFn({ method: "POST" })
+  .validator(z.object({ tripId: z.string() }))
+  .middleware([authMiddleware])
+  .handler(async ({ data }) => {
+    // Check if the share already exists
+    const existingShare = await db.query.sharedTrips.findFirst({
+      where: eq(sharedTrips.tripId, data.tripId),
+    });
+
+    if (existingShare) {
+      return { shareId: existingShare.shareToken };
+    }
+
+    const shareId = `trip_${customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 7)()}`;
+
+    await db.insert(sharedTrips).values({
+      tripId: data.tripId,
+      shareToken: shareId,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return { shareId };
   });
