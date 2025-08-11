@@ -18,8 +18,6 @@ import {
   ArrowBigRight,
   GripVertical,
   Share,
-  Copy,
-  Check,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -28,15 +26,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
+import { DialogTrigger } from "~/components/ui/dialog";
 import { getTripWithItineraryQuery } from "~/lib/queries/trips";
 import {
   useCreatePlace,
@@ -65,6 +55,7 @@ import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
 import { cn } from "~/lib/utils";
 import { tr } from "zod/v4/locales";
 import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
+import { ShareTripDialog } from "./ShareTripDialog";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -100,7 +91,6 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
-  const [isCopied, setIsCopied] = useState(false);
 
   // Refs for debouncing per day
   const searchTimeoutRefs = useRef<Record<number, NodeJS.Timeout>>({});
@@ -410,16 +400,6 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       setIsShareDialogOpen(true);
     } catch (error) {
       console.error("Failed to share trip:", error);
-    }
-  };
-
-  const handleCopyShareUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
     }
   };
 
@@ -935,54 +915,11 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       </div>
 
       {/* Share Dialog */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Share Trip</DialogTitle>
-            <DialogDescription>
-              Share your trip with others using this link. Anyone with the link
-              can view your trip.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Input
-                readOnly
-                value={shareUrl}
-                className="flex-1 bg-muted"
-                placeholder="Generating share URL..."
-              />
-              <Button
-                onClick={handleCopyShareUrl}
-                disabled={!shareUrl}
-                size="sm"
-                variant="outline"
-              >
-                {isCopied ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          <DialogFooter className="sm:justify-start">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setIsShareDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ShareTripDialog
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        shareUrl={shareUrl}
+      />
     </div>
   );
 }

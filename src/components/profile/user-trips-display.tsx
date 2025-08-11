@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -14,6 +15,7 @@ import {
   Ellipsis,
   Share2,
   Trash,
+  Loader2,
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
 import { Link } from "@tanstack/react-router";
@@ -24,9 +26,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
+import { ShareTripDialog } from "../trips/ShareTripDialog";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const shareTrip = useShareTrip();
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -57,6 +65,18 @@ export function UserTripsDisplay() {
         return "bg-purple-100 text-purple-700 hover:bg-purple-100";
       default:
         return "bg-gray-100 text-gray-700 hover:bg-gray-100";
+    }
+  };
+
+  const handleShareTrip = async (tripId: string) => {
+    try {
+      setSelectedTripId(tripId);
+      const result = await shareTrip.mutateAsync({ tripId });
+      const shareUrl = `${window.location.origin}/view/${result.shareId}`;
+      setShareUrl(shareUrl);
+      setIsShareDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to share trip:", error);
     }
   };
 
@@ -163,15 +183,17 @@ export function UserTripsDisplay() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem asChild>
-                    <Link
-                      to={`/trips/$tripId`}
-                      params={{ tripId: trip.id }}
-                      className="cursor-pointer"
-                    >
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => handleShareTrip(trip.id)}
+                    disabled={shareTrip.isPending && selectedTripId === trip.id}
+                  >
+                    {shareTrip.isPending && selectedTripId === trip.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
                       <Share2 className="h-4 w-4" />
-                      Share Trip
-                    </Link>
+                    )}
+                    Share Trip
                   </DropdownMenuItem>
                   <DropdownMenuItem variant="destructive" asChild>
                     <Link
@@ -259,6 +281,13 @@ export function UserTripsDisplay() {
           </Card>
         ))}
       </div>
+
+      {/* Share Dialog */}
+      <ShareTripDialog
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        shareUrl={shareUrl}
+      />
     </div>
   );
 }
