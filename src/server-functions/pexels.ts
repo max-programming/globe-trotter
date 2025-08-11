@@ -1,11 +1,17 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { setTimeout } from "timers/promises";
 
 const searchImageSchema = z.object({
   query: z.string().min(1, "Search query is required"),
 });
 
-export const searchPexelsImages = createServerFn({ method: "POST" })
+const searchImagesSchema = z.object({
+  query: z.string().min(1, "Search query is required"),
+  perPage: z.number().min(1).max(80).default(20),
+});
+
+export const searchPexelsImage = createServerFn({ method: "POST" })
   .validator(searchImageSchema)
   .handler(async ({ data }) => {
     const apiKey = process.env.PEXELS_API_KEY;
@@ -39,6 +45,55 @@ export const searchPexelsImages = createServerFn({ method: "POST" })
           photographer: photo.photographer,
           photographerUrl: photo.photographer_url,
           pexelsUrl: photo.url,
+        };
+      }
+
+      return {
+        success: false,
+        error: "No images found for this destination",
+      };
+    } catch (error) {
+      console.error("Failed to fetch from Pexels:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to fetch image",
+      };
+    }
+  });
+export const searchPexelsImages = createServerFn({ method: "POST" })
+  .validator(searchImagesSchema)
+  .handler(async ({ data }) => {
+    const apiKey = process.env.PEXELS_API_KEY;
+
+    if (!apiKey) {
+      throw new Error("Pexels API key not configured");
+    }
+
+    try {
+      await setTimeout(2000);
+      const response = await fetch(
+        `https://api.pexels.com/v1/search?query=${encodeURIComponent(data.query)}&per_page=${data.perPage}&orientation=landscape`,
+        {
+          headers: {
+            Authorization: apiKey,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Pexels API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Return the first image URL if available
+      if (result.photos && result.photos.length > 0) {
+        return {
+          success: true,
+          photos: result.photos.map((photo: any) => ({
+            id: photo.id,
+            url: photo.src.medium,
+          })),
         };
       }
 
