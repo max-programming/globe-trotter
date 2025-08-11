@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getTripWithItineraryByShareIdQuery } from "~/lib/queries/trips";
+import { SharedTripPage } from "~/components/trips/SharedTripPage";
+import { SharedTripSkeleton } from "~/components/trips/SharedTripSkeleton";
 
 export const Route = createFileRoute("/view/$shareId")({
   component: TripViewSharePage,
-  pendingComponent: () => <div>Loading...</div>,
+  pendingComponent: SharedTripSkeleton,
   loader: ({ context, params }) => {
     context.queryClient.ensureQueryData(
       getTripWithItineraryByShareIdQuery(params.shareId)
@@ -12,5 +14,6 @@ export const Route = createFileRoute("/view/$shareId")({
 });
 
 function TripViewSharePage() {
-  return <div>Hello "/view/$shareId"!</div>;
+  const { shareId } = Route.useParams();
+  return <SharedTripPage shareId={shareId} />;
 }

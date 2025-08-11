@@ -462,23 +462,85 @@ export const updateTripNotes = createServerFn({ method: "POST" })
 export const getTripWithItineraryByShareId = createServerFn({ method: "GET" })
   .validator(z.object({ shareId: z.string() }))
   .handler(async ({ data }) => {
-    return db.query.sharedTrips.findFirst({
+    // First, find the shared trip record to get the tripId
+    const sharedTrip = await db.query.sharedTrips.findFirst({
       where: and(
         eq(sharedTrips.shareToken, data.shareId),
         eq(sharedTrips.isActive, true)
       ),
     });
+
+    console.log(sharedTrip);
+
+    if (!sharedTrip) {
+      throw new Error("Shared trip not found or no longer active");
+    }
+
+    // Then fetch the full trip data with itinerary (no auth check needed for public shares)
+    const trip = await db.query.trips.findFirst({
+      where: eq(trips.id, sharedTrip.tripId),
+      with: {
+        place: true,
+        itinerary: {
+          orderBy: [asc(tripItinerary.date)],
+          with: {
+            places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!trip) {
+      throw new Error("Trip not found");
+    }
+
+    // Increment view count for analytics
+    await db
+      .update(sharedTrips)
+      .set({
+        viewCount: sql`${sharedTrips.viewCount} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(sharedTrips.id, sharedTrip.id));
+
+    return {
+      trip: trip,
+      itinerary: trip.itinerary,
+      shareInfo: {
+        shareToken: sharedTrip.shareToken,
+        viewCount: (sharedTrip.viewCount || 0) + 1,
+        allowCopying: sharedTrip.allowCopying,
+      },
+    };
   });
 
 export const createTripShare = createServerFn({ method: "POST" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
+    // Check if the share already exists
+    const existingShare = await db.query.sharedTrips.findFirst({
+      where: eq(sharedTrips.tripId, data.tripId),
+    });
+
+    if (existingShare) {
+      return { shareId: existingShare.shareToken };
+    }
+
     const shareId = `trip_${customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 7)()}`;
 
-    db.insert(sharedTrips).values({
+    await db.insert(sharedTrips).values({
       tripId: data.tripId,
       shareToken: shareId,
+      isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

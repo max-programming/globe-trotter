@@ -7,7 +7,7 @@ export function useShareTrip() {
 
   return useMutation({
     mutationFn: async (data: { tripId: string }) => {
-      return await createTripShareFn({ data });
+      return createTripShareFn({ data });
     },
   });
 }
