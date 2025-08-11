@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getWebRequest } from "@tanstack/react-start/server";
 import { signInSchema, signUpSchema } from "~/components/auth";
 import { auth } from "~/lib/auth";
+import { updateUserPostSignUp } from "./db-functions/update-user-post-sign-up";
 
 export const getSession = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -28,7 +29,7 @@ export const signUp = createServerFn({ method: "POST" })
   .validator(signUpSchema)
   .handler(async ({ data }) => {
     const { headers } = getWebRequest();
-    await auth.api.signUpEmail({
+    const { user } = await auth.api.signUpEmail({
       headers,
       body: {
         name: data.name,
@@ -36,4 +37,6 @@ export const signUp = createServerFn({ method: "POST" })
         password: data.password,
       },
     });
+
+    await updateUserPostSignUp(user.id, data);
   });

@@ -1,11 +1,13 @@
-import { SiGithub } from "@icons-pack/react-simple-icons";
+import { SiGoogle } from "@icons-pack/react-simple-icons";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
+import { authClient } from "~/lib/auth-client";
 
 function OauthOptions() {
-  function handleGithubAuth() {
-    // TODO: Implement GitHub OAuth
-    console.log(`GitHub attempt`);
+  function handleGoogleAuth() {
+    authClient.signIn.social({
+      provider: "google",
+    });
   }
 
   return (
@@ -13,16 +15,18 @@ function OauthOptions() {
       <Button
         variant="outline"
         type="button"
-        className="w-full"
-        onClick={handleGithubAuth}
+        className="w-full h-10 border-2 hover:bg-primary-50 transition-all duration-200 hover:border-primary-200 hover:shadow-md group"
+        onClick={handleGoogleAuth}
       >
-        <SiGithub className="mr-2 h-4 w-4" />
-        Continue with GitHub
+        <SiGoogle className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform" />
+        <span className="font-medium">Continue with Google</span>
       </Button>
       <div className="relative flex items-center gap-4">
-        <Separator className="flex-1" />
-        <span className="text-xs uppercase">Or continue with</span>
-        <Separator className="flex-1" />
+        <Separator className="flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+        <span className="text-xs font-medium text-muted-foreground bg-card px-3 py-1 rounded-full border">
+          Or continue with email
+        </span>
+        <Separator className="flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
     </div>
   );
