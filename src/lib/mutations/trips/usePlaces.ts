@@ -1,6 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { createPlace, updatePlace, deletePlace } from "~/server-functions/trip";
+import {
+  createPlace,
+  updatePlace,
+  deletePlace,
+  reorderTripPlaces,
+} from "~/server-functions/trip";
 
 export function useCreatePlace() {
   const queryClient = useQueryClient();
@@ -59,6 +64,24 @@ export function useDeletePlace() {
     mutationFn: async (data: { tripPlaceId: number }) => {
       return await deletePlaceFn({ data });
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["trips"],
+        type: "all",
+      });
+    },
+  });
+}
+
+export function useReorderTripPlaces() {
+  const queryClient = useQueryClient();
+  const reorderFn = useServerFn(reorderTripPlaces);
+
+  return useMutation({
+    mutationFn: async (data: {
+      tripItineraryId: number;
+      orders: Array<{ tripPlaceId: number; sortOrder: number }>;
+    }) => reorderFn({ data }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["trips"],

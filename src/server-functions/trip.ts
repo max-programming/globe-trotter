@@ -4,7 +4,7 @@ import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
 import { trips, places, tripPlaces, tripItinerary } from "~/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -72,6 +72,56 @@ export const createTrip = createServerFn({ method: "POST" })
     }
 
     return newTrip;
+  });
+
+// Bulk reorder places within a day using a single UPDATE statement
+export const reorderTripPlaces = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      tripItineraryId: z.number(),
+      orders: z
+        .array(
+          z.object({
+            tripPlaceId: z.number(),
+            sortOrder: z.number(),
+          })
+        )
+        .min(1),
+    })
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    // Verify ownership via itinerary -> trip
+    const it = await db
+      .select({ userId: trips.userId })
+      .from(tripItinerary)
+      .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
+      .where(eq(tripItinerary.id, data.tripItineraryId))
+      .limit(1);
+
+    if (!it.length || it[0].userId !== context.user.id) {
+      throw new Error("Itinerary not found or access denied");
+    }
+
+    const ids = data.orders.map((o) => o.tripPlaceId);
+
+    // Build CASE expression using query builder
+    const caseExpr = sql`CASE ${tripPlaces.id} ${sql.join(
+      data.orders.map((o) => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
+      sql` `
+    )} ELSE ${tripPlaces.sortOrder} END`;
+
+    await db
+      .update(tripPlaces)
+      .set({ sortOrder: caseExpr, updatedAt: new Date() })
+      .where(
+        and(
+          eq(tripPlaces.tripItineraryId, data.tripItineraryId),
+          inArray(tripPlaces.id, ids)
+        )
+      );
+
+    return { success: true } as const;
   });
 
 export const getTripWithItinerary = createServerFn({ method: "GET" })
@@ -210,13 +260,17 @@ export const createPlace = createServerFn({ method: "POST" })
       throw new Error("Place not found. Please search for the place first.");
     }
 
-    // Determine next sort order for the day
-    const existingForDay = await db
-      .select({ id: tripPlaces.id })
+    // Determine next sort order for the day using unit 100 increments
+    const existingOrders = await db
+      .select({ sortOrder: tripPlaces.sortOrder })
       .from(tripPlaces)
       .where(eq(tripPlaces.tripItineraryId, data.tripItineraryId));
 
-    const nextSort = existingForDay.length;
+    const currentMax = existingOrders.reduce(
+      (m, r) => (r.sortOrder && r.sortOrder > m ? r.sortOrder : m),
+      0
+    );
+    const nextSort = Number(currentMax) + 100;
 
     const [newTripPlace] = await db
       .insert(tripPlaces)

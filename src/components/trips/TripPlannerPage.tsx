@@ -27,6 +27,7 @@ import { getTripWithItineraryQuery } from "~/lib/queries/trips";
 import {
   useCreatePlace,
   useUpdatePlace,
+  useReorderTripPlaces,
 } from "~/lib/mutations/trips/usePlaces";
 import {
   DndContext,
@@ -92,6 +93,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   );
   const createPlaceMutation = useCreatePlace();
   const updatePlaceMutation = useUpdatePlace();
+  const reorderPlacesMutation = useReorderTripPlaces();
   const upsertPlaceFn = useServerFn(upsertPlace);
   const updateTripNotesMutation = useUpdateTripNotes();
   // DnD sensors
@@ -110,7 +112,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     // Compute new order
     const reordered = arrayMove(day.places, oldIndex, newIndex);
 
-    // Optimistic UI update in cache
+    // Optimistic UI update in cache (unit-100 ordering)
     queryClient.setQueryData(["trips", tripId, "itinerary"], (prev: any) => {
       if (!prev) return prev;
       const next = { ...prev };
@@ -120,7 +122,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
               ...d,
               places: reordered.map((p: any, idx: number) => ({
                 ...p,
-                sortOrder: idx,
+                sortOrder: (idx + 1) * 100,
               })),
             }
           : d
@@ -128,13 +130,15 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       return next;
     });
 
-    // Persist each item's sortOrder to avoid duplicates
+    // Persist using a single bulk reorder API call
     try {
-      await Promise.all(
-        reordered.map((p: any, idx: number) =>
-          updatePlaceMutation.mutateAsync({ tripPlaceId: p.id, sortOrder: idx })
-        )
-      );
+      await reorderPlacesMutation.mutateAsync({
+        tripItineraryId: day.id,
+        orders: reordered.map((p: any, idx: number) => ({
+          tripPlaceId: p.id,
+          sortOrder: (idx + 1) * 100,
+        })),
+      });
     } catch (e) {
       console.error("Failed to update order", e);
     }
