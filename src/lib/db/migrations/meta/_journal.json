@@ -50,6 +50,27 @@
       "when": 1754929783282,
       "tag": "0006_brief_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1754934808086,
+      "tag": "0007_tough_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1754936569304,
+      "tag": "0008_outstanding_excalibur",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1754944362057,
+      "tag": "0009_add_sort_order_trip_places",
+      "breakpoints": true
     }
   ]
 }

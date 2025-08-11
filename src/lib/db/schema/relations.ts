@@ -3,6 +3,7 @@ import { users } from "./auth";
 import {
   cities,
   countries,
+  places,
   trips,
   tripItinerary,
   tripPlaces,
@@ -24,11 +25,21 @@ export const citiesRelations = relations(cities, ({ one, many }) => ({
   users: many(users),
 }));
 
+// Places relations
+export const placesRelations = relations(places, ({ many }) => ({
+  trips: many(trips),
+  tripPlaces: many(tripPlaces),
+}));
+
 // Trip relations
 export const tripsRelations = relations(trips, ({ one, many }) => ({
   user: one(users, {
     fields: [trips.userId],
     references: [users.id],
+  }),
+  place: one(places, {
+    fields: [trips.placeId],
+    references: [places.placeId],
   }),
   itinerary: many(tripItinerary),
   sharedTrips: many(sharedTrips),
@@ -48,6 +59,10 @@ export const tripPlacesRelations = relations(tripPlaces, ({ one }) => ({
   itinerary: one(tripItinerary, {
     fields: [tripPlaces.tripItineraryId],
     references: [tripItinerary.id],
+  }),
+  place: one(places, {
+    fields: [tripPlaces.placeId],
+    references: [places.placeId],
   }),
 }));
 

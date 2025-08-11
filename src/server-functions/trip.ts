@@ -89,16 +89,22 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
       throw new Error("Trip not found or access denied");
     }
 
-    // Get trip itinerary with places
+    // Get trip itinerary with places (now including place details from places table)
     const itineraryData = await db
       .select({
         itinerary: tripItinerary,
-        place: tripPlaces,
+        tripPlace: tripPlaces,
+        place: places,
       })
       .from(tripItinerary)
       .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
+      .leftJoin(places, eq(tripPlaces.placeId, places.placeId))
       .where(eq(tripItinerary.tripId, data.tripId))
-      .orderBy(tripItinerary.date, tripPlaces.time);
+      .orderBy(
+        tripItinerary.date,
+        tripPlaces.sortOrder,
+        tripPlaces.scheduledTime
+      );
 
     // Group places by itinerary day
     const itineraryWithPlaces = itineraryData.reduce(
@@ -112,8 +118,11 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
           };
         }
 
-        if (row.place) {
-          acc[itineraryId].places.push(row.place);
+        if (row.tripPlace && row.place) {
+          acc[itineraryId].places.push({
+            ...row.tripPlace,
+            placeDetails: row.place,
+          });
         }
 
         return acc;
@@ -167,11 +176,10 @@ export const createPlace = createServerFn({ method: "POST" })
   .validator(
     z.object({
       tripItineraryId: z.number(),
-      name: z.string(),
-      type: z.string(),
-      description: z.string().optional(),
-      time: z.string().optional(), // HH:MM format
-      notes: z.string().optional(),
+      placeId: z.string(), // Google Place ID
+      scheduledTime: z.string().optional(), // HH:MM format
+      userNotes: z.string().optional(),
+      visitDuration: z.number().optional(), // in minutes
     })
   )
   .middleware([authMiddleware])
@@ -191,31 +199,51 @@ export const createPlace = createServerFn({ method: "POST" })
       throw new Error("Itinerary not found or access denied");
     }
 
-    const [newPlace] = await db
+    // Ensure the place exists in the places table (it should from the search/autocomplete)
+    const existingPlace = await db
+      .select()
+      .from(places)
+      .where(eq(places.placeId, data.placeId))
+      .limit(1);
+
+    if (!existingPlace.length) {
+      throw new Error("Place not found. Please search for the place first.");
+    }
+
+    // Determine next sort order for the day
+    const existingForDay = await db
+      .select({ id: tripPlaces.id })
+      .from(tripPlaces)
+      .where(eq(tripPlaces.tripItineraryId, data.tripItineraryId));
+
+    const nextSort = existingForDay.length;
+
+    const [newTripPlace] = await db
       .insert(tripPlaces)
       .values({
         tripItineraryId: data.tripItineraryId,
-        name: data.name,
-        type: data.type,
-        description: data.description,
-        time: data.time,
-        notes: data.notes,
+        placeId: data.placeId,
+        sortOrder: nextSort,
+        scheduledTime: data.scheduledTime,
+        userNotes: data.userNotes,
+        visitDuration: data.visitDuration,
         updatedAt: new Date(),
       })
       .returning();
 
-    return newPlace;
+    return newTripPlace;
   });
 
 export const updatePlace = createServerFn({ method: "POST" })
   .validator(
     z.object({
-      placeId: z.number(),
-      name: z.string().optional(),
-      type: z.string().optional(),
-      description: z.string().optional(),
-      time: z.string().optional(),
-      notes: z.string().optional(),
+      tripPlaceId: z.number(), // ID of the tripPlaces record, not the Google place ID
+      scheduledTime: z.string().optional(),
+      userNotes: z.string().optional(),
+      visitDuration: z.number().optional(),
+      isVisited: z.boolean().optional(),
+      userRating: z.number().min(1).max(5).optional(),
+      sortOrder: z.number().optional(),
     })
   )
   .middleware([authMiddleware])
@@ -229,7 +257,7 @@ export const updatePlace = createServerFn({ method: "POST" })
         eq(tripPlaces.tripItineraryId, tripItinerary.id)
       )
       .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
-      .where(eq(tripPlaces.id, data.placeId))
+      .where(eq(tripPlaces.id, data.tripPlaceId))
       .limit(1);
 
     if (
@@ -241,24 +269,26 @@ export const updatePlace = createServerFn({ method: "POST" })
 
     const updateData: any = { updatedAt: new Date() };
 
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.type !== undefined) updateData.type = data.type;
-    if (data.description !== undefined)
-      updateData.description = data.description;
-    if (data.time !== undefined) updateData.time = data.time;
-    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.scheduledTime !== undefined)
+      updateData.scheduledTime = data.scheduledTime;
+    if (data.userNotes !== undefined) updateData.userNotes = data.userNotes;
+    if (data.visitDuration !== undefined)
+      updateData.visitDuration = data.visitDuration;
+    if (data.isVisited !== undefined) updateData.isVisited = data.isVisited;
+    if (data.userRating !== undefined) updateData.userRating = data.userRating;
+    if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
 
     const [updatedPlace] = await db
       .update(tripPlaces)
       .set(updateData)
-      .where(eq(tripPlaces.id, data.placeId))
+      .where(eq(tripPlaces.id, data.tripPlaceId))
       .returning();
 
     return updatedPlace;
   });
 
 export const deletePlace = createServerFn({ method: "POST" })
-  .validator(z.object({ placeId: z.number() }))
+  .validator(z.object({ tripPlaceId: z.number() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
     // Verify ownership through trip itinerary and trip
@@ -270,7 +300,7 @@ export const deletePlace = createServerFn({ method: "POST" })
         eq(tripPlaces.tripItineraryId, tripItinerary.id)
       )
       .innerJoin(trips, eq(tripItinerary.tripId, trips.id))
-      .where(eq(tripPlaces.id, data.placeId))
+      .where(eq(tripPlaces.id, data.tripPlaceId))
       .limit(1);
 
     if (
@@ -280,7 +310,115 @@ export const deletePlace = createServerFn({ method: "POST" })
       throw new Error("Place not found or access denied");
     }
 
-    await db.delete(tripPlaces).where(eq(tripPlaces.id, data.placeId));
+    await db.delete(tripPlaces).where(eq(tripPlaces.id, data.tripPlaceId));
 
     return { success: true };
+  });
+
+// Function to store/upsert place details from Google Places API
+export const upsertPlace = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      place_id: z.string(),
+      name: z.string(),
+      formatted_address: z.string(),
+      main_text: z.string(),
+      secondary_text: z.string().optional(),
+      types: z.array(z.string()),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+      country_code: z.string().optional(),
+      country_name: z.string().optional(),
+      administrative_levels: z.any().optional(),
+      timezone: z.string().optional(),
+      photo_reference: z.string().optional(),
+    })
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data }) => {
+    // Check if place already exists
+    const existingPlace = await db
+      .select()
+      .from(places)
+      .where(eq(places.placeId, data.place_id))
+      .limit(1);
+
+    if (existingPlace.length > 0) {
+      // Update existing place with any new information
+      const [updatedPlace] = await db
+        .update(places)
+        .set({
+          name: data.name,
+          formattedAddress: data.formatted_address,
+          mainText: data.main_text,
+          secondaryText: data.secondary_text,
+          placeTypes: data.types,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          countryCode: data.country_code,
+          countryName: data.country_name,
+          administrativeLevels: data.administrative_levels,
+          timezone: data.timezone,
+          photoReference: data.photo_reference,
+          updatedAt: new Date(),
+        })
+        .where(eq(places.placeId, data.place_id))
+        .returning();
+
+      return updatedPlace;
+    } else {
+      // Insert new place
+      const [newPlace] = await db
+        .insert(places)
+        .values({
+          placeId: data.place_id,
+          name: data.name,
+          formattedAddress: data.formatted_address,
+          mainText: data.main_text,
+          secondaryText: data.secondary_text,
+          placeTypes: data.types,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          countryCode: data.country_code,
+          countryName: data.country_name,
+          administrativeLevels: data.administrative_levels,
+          timezone: data.timezone,
+          photoReference: data.photo_reference,
+        })
+        .returning();
+
+      return newPlace;
+    }
+  });
+
+export const updateTripNotes = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      tripId: z.string(),
+      notes: z.string(),
+    })
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    // Verify ownership
+    const trip = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
+      .limit(1);
+
+    if (!trip.length) {
+      throw new Error("Trip not found or access denied");
+    }
+
+    const [updatedTrip] = await db
+      .update(trips)
+      .set({
+        notes: data.notes,
+        updatedAt: new Date(),
+      })
+      .where(eq(trips.id, data.tripId))
+      .returning();
+
+    return updatedTrip;
   });

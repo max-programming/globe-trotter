@@ -18,8 +18,8 @@ import { Route as protectedProfileRouteImport } from './routes/(protected)/profi
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
+import { Route as protectedTripsTripIdRouteImport } from './routes/(protected)/trips/$tripId'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
-import { Route as protectedTripsActivitiesTripIdRouteImport } from './routes/(protected)/trips/activities/$tripId'
 import { ServerRoute as ApiPlacesAutocompleteServerRouteImport } from './routes/api/places/autocomplete'
 import { ServerRoute as ApiAuthSplatServerRouteImport } from './routes/api/auth/$'
 
@@ -58,16 +58,15 @@ const protectedTripsNewRoute = protectedTripsNewRouteImport.update({
   path: '/trips/new',
   getParentRoute: () => protectedRouteRoute,
 } as any)
+const protectedTripsTripIdRoute = protectedTripsTripIdRouteImport.update({
+  id: '/trips/$tripId',
+  path: '/trips/$tripId',
+  getParentRoute: () => protectedRouteRoute,
+} as any)
 const protectedSettingsProfileRoute =
   protectedSettingsProfileRouteImport.update({
     id: '/settings/profile',
     path: '/settings/profile',
-    getParentRoute: () => protectedRouteRoute,
-  } as any)
-const protectedTripsActivitiesTripIdRoute =
-  protectedTripsActivitiesTripIdRouteImport.update({
-    id: '/trips/activities/$tripId',
-    path: '/trips/activities/$tripId',
     getParentRoute: () => protectedRouteRoute,
   } as any)
 const ApiPlacesAutocompleteServerRoute =
@@ -88,8 +87,8 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
+  '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
-  '/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof protectedIndexRoute
@@ -97,8 +96,8 @@ export interface FileRoutesByTo {
   '/sign-up': typeof authSignUpRoute
   '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
+  '/trips/$tripId': typeof protectedTripsTripIdRoute
   '/trips/new': typeof protectedTripsNewRoute
-  '/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -109,8 +108,8 @@ export interface FileRoutesById {
   '/(protected)/profile': typeof protectedProfileRoute
   '/(protected)/': typeof protectedIndexRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
+  '/(protected)/trips/$tripId': typeof protectedTripsTripIdRoute
   '/(protected)/trips/new': typeof protectedTripsNewRoute
-  '/(protected)/trips/activities/$tripId': typeof protectedTripsActivitiesTripIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,8 +119,8 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/profile'
     | '/settings/profile'
+    | '/trips/$tripId'
     | '/trips/new'
-    | '/trips/activities/$tripId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,8 +128,8 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/profile'
     | '/settings/profile'
+    | '/trips/$tripId'
     | '/trips/new'
-    | '/trips/activities/$tripId'
   id:
     | '__root__'
     | '/(auth)'
@@ -140,8 +139,8 @@ export interface FileRouteTypes {
     | '/(protected)/profile'
     | '/(protected)/'
     | '/(protected)/settings/profile'
+    | '/(protected)/trips/$tripId'
     | '/(protected)/trips/new'
-    | '/(protected)/trips/activities/$tripId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -225,18 +224,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof protectedTripsNewRouteImport
       parentRoute: typeof protectedRouteRoute
     }
+    '/(protected)/trips/$tripId': {
+      id: '/(protected)/trips/$tripId'
+      path: '/trips/$tripId'
+      fullPath: '/trips/$tripId'
+      preLoaderRoute: typeof protectedTripsTripIdRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
     '/(protected)/settings/profile': {
       id: '/(protected)/settings/profile'
       path: '/settings/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof protectedSettingsProfileRouteImport
-      parentRoute: typeof protectedRouteRoute
-    }
-    '/(protected)/trips/activities/$tripId': {
-      id: '/(protected)/trips/activities/$tripId'
-      path: '/trips/activities/$tripId'
-      fullPath: '/trips/activities/$tripId'
-      preLoaderRoute: typeof protectedTripsActivitiesTripIdRouteImport
       parentRoute: typeof protectedRouteRoute
     }
   }
@@ -278,16 +277,16 @@ interface protectedRouteRouteChildren {
   protectedProfileRoute: typeof protectedProfileRoute
   protectedIndexRoute: typeof protectedIndexRoute
   protectedSettingsProfileRoute: typeof protectedSettingsProfileRoute
+  protectedTripsTripIdRoute: typeof protectedTripsTripIdRoute
   protectedTripsNewRoute: typeof protectedTripsNewRoute
-  protectedTripsActivitiesTripIdRoute: typeof protectedTripsActivitiesTripIdRoute
 }
 
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
   protectedProfileRoute: protectedProfileRoute,
   protectedIndexRoute: protectedIndexRoute,
   protectedSettingsProfileRoute: protectedSettingsProfileRoute,
+  protectedTripsTripIdRoute: protectedTripsTripIdRoute,
   protectedTripsNewRoute: protectedTripsNewRoute,
-  protectedTripsActivitiesTripIdRoute: protectedTripsActivitiesTripIdRoute,
 }
 
 const protectedRouteRouteWithChildren = protectedRouteRoute._addFileChildren(
