@@ -107,13 +107,9 @@ export function UserProfileDisplay() {
                 </div>
 
                 <div className="flex flex-col space-y-2 pt-2">
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
-                  >
+                  <Button asChild size="sm" className="w-full">
                     <Link to="/settings/profile">
-                      <Edit className="w-3 h-3 mr-2" />
+                      <Edit className="w-3 h-3" />
                       Edit Profile
                     </Link>
                   </Button>
