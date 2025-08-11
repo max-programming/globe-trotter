@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/(protected)/")({
   component: HomePage,
   head: () => ({
     meta: [{ title: "Home | Globe Trotter" }],
