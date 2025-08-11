@@ -33,6 +33,7 @@ import { Link } from "@tanstack/react-router";
 import { OauthOptions } from "./oauth-options";
 import { useSignUp } from "~/lib/mutations/auth/use-sign-up";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { useSignUpImageUpload } from "~/lib/hooks/use-signup-image-upload";
 import {
   AlertCircleIcon,
   Check,
@@ -47,7 +48,6 @@ import {
 import { cn } from "~/lib/utils";
 
 export function SignUpForm() {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
 
@@ -60,12 +60,25 @@ export function SignUpForm() {
       cityId: undefined,
       countryId: undefined,
       additionalInfo: "",
+      image: "",
       password: "",
       confirmPassword: "",
     },
   });
 
   const signUpMutation = useSignUp(form);
+
+  const imageUpload = useSignUpImageUpload({
+    onSuccess: result => {
+      form.setValue("image", result.imageUrl);
+    },
+    onError: error => {
+      form.setError("root", {
+        type: "manual",
+        message: `Image upload failed: ${error}`,
+      });
+    },
+  });
 
   // Fetch countries using TanStack Query
   const { data: countries = [], isLoading: isLoadingCountries } =
@@ -79,17 +92,6 @@ export function SignUpForm() {
 
   function handleSubmit(data: SignUpFormData) {
     signUpMutation.mutate(data);
-  }
-
-  function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        setProfileImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
   }
 
   return (
@@ -116,7 +118,7 @@ export function SignUpForm() {
             <div className="relative group">
               <Avatar className="w-20 h-20 border-3 border-white shadow-lg">
                 <AvatarImage
-                  src={profileImage || ""}
+                  src={imageUpload.previewUrl || ""}
                   className="object-cover"
                 />
                 <AvatarFallback className="bg-gradient-to-br from-primary-100 to-primary-200 text-primary-700">
@@ -125,7 +127,11 @@ export function SignUpForm() {
               </Avatar>
               <label
                 htmlFor="profile-image"
-                className="absolute -bottom-1 -right-1 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full p-1.5 cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+                className={cn(
+                  "absolute -bottom-1 -right-1 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full p-1.5 cursor-pointer hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105",
+                  imageUpload.isUploading &&
+                    "animate-pulse opacity-70 cursor-not-allowed"
+                )}
               >
                 <Camera className="w-3.5 h-3.5" />
               </label>
@@ -133,9 +139,17 @@ export function SignUpForm() {
                 id="profile-image"
                 type="file"
                 accept="image/*"
-                onChange={handleImageChange}
+                onChange={imageUpload.handleFileSelect}
                 className="hidden"
+                disabled={imageUpload.isUploading || signUpMutation.isPending}
               />
+              {imageUpload.isUploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-full">
+                  <div className="text-xs text-white font-medium">
+                    Uploading...
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

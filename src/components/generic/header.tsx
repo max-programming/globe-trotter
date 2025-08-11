@@ -23,7 +23,7 @@ export const Header = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 shadow-md overflow-visible h-20">
+      <div className="flex items-center justify-between p-4 shadow-md overflow-visible h-20 bg-transparent">
         <div className="flex items-center gap-2">
           <div className="h-10 w-auto">
             <img
@@ -58,7 +58,7 @@ export const Header = () => {
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 signOut();
               }}

@@ -1,11 +1,12 @@
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { signOut } from "~/server-functions/auth";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 
 export function useSignOut() {
   const signOutFn = useServerFn(signOut);
   const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -15,7 +16,8 @@ export function useSignOut() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-      navigate({ to: "/sign-in" });
+      await navigate({ to: "/sign-in" });
+      router.invalidate();
     },
   });
 }
