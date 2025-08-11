@@ -14,10 +14,10 @@ import {
   ChevronRight,
   Loader2,
   X,
+  Pencil,
+  ArrowBigRight,
   GripVertical,
   Share,
-  Copy,
-  Check,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -26,15 +26,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Badge } from "~/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "~/components/ui/dialog";
+import { DialogTrigger } from "~/components/ui/dialog";
 import { getTripWithItineraryQuery } from "~/lib/queries/trips";
 import {
   useCreatePlace,
@@ -60,7 +52,10 @@ import { upsertPlace } from "~/server-functions/trip";
 import { Heading } from "../generic/heading";
 import { TripMap } from "../maps/TripMap";
 import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
+import { cn } from "~/lib/utils";
+import { tr } from "zod/v4/locales";
 import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
+import { ShareTripDialog } from "./ShareTripDialog";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -96,7 +91,6 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
-  const [isCopied, setIsCopied] = useState(false);
 
   // Refs for debouncing per day
   const searchTimeoutRefs = useRef<Record<number, NodeJS.Timeout>>({});
@@ -236,12 +230,12 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const searchPlacesForDay = useCallback(
     async (dayId: number, query: string) => {
       if (!query || query.length < 2) {
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
-        setDayIsSearching(prev => ({ ...prev, [dayId]: false }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
+        setDayIsSearching((prev) => ({ ...prev, [dayId]: false }));
         return;
       }
 
-      setDayIsSearching(prev => ({ ...prev, [dayId]: true }));
+      setDayIsSearching((prev) => ({ ...prev, [dayId]: true }));
 
       try {
         const searchParams = new URLSearchParams({
@@ -261,19 +255,19 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
         const data = await response.json();
 
         if (data.status === "success") {
-          setDayPlaceSuggestions(prev => ({
+          setDayPlaceSuggestions((prev) => ({
             ...prev,
             [dayId]: data.suggestions,
           }));
         } else {
           console.error("Places API error:", data.error);
-          setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+          setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
         }
       } catch (error) {
         console.error("Failed to fetch place suggestions:", error);
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
       } finally {
-        setDayIsSearching(prev => ({ ...prev, [dayId]: false }));
+        setDayIsSearching((prev) => ({ ...prev, [dayId]: false }));
       }
     },
     []
@@ -303,19 +297,19 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      Object.values(searchTimeoutRefs.current).forEach(timeout => {
+      Object.values(searchTimeoutRefs.current).forEach((timeout) => {
         if (timeout) clearTimeout(timeout);
       });
     };
   }, []);
 
   const handleDaySearchChange = (dayId: number, value: string) => {
-    setDaySearchQueries(prev => ({ ...prev, [dayId]: value }));
+    setDaySearchQueries((prev) => ({ ...prev, [dayId]: value }));
     debouncedSearchForDay(dayId, value);
-    setDayShowSuggestions(prev => ({ ...prev, [dayId]: true }));
+    setDayShowSuggestions((prev) => ({ ...prev, [dayId]: true }));
 
     if (!value) {
-      setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+      setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
     }
   };
 
@@ -324,7 +318,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     place: GooglePlaceSuggestion
   ) => {
     setSelectedPlace(place);
-    setDayShowSuggestions(prev => ({ ...prev, [dayId]: false }));
+    setDayShowSuggestions((prev) => ({ ...prev, [dayId]: false }));
   };
 
   const handleAddPlaceToDay = async (
@@ -355,8 +349,8 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       });
 
       // Clear the search for this day after successful addition
-      setDaySearchQueries(prev => ({ ...prev, [day.id]: "" }));
-      setDayPlaceSuggestions(prev => ({ ...prev, [day.id]: [] }));
+      setDaySearchQueries((prev) => ({ ...prev, [day.id]: "" }));
+      setDayPlaceSuggestions((prev) => ({ ...prev, [day.id]: [] }));
       setSelectedPlace(null);
     } catch (error) {
       console.error("Failed to add place:", error);
@@ -366,14 +360,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   };
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays(prev => {
+    setExpandedDays((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
         // Clear search state when collapsing
-        setDaySearchQueries(prev => ({ ...prev, [dayId]: "" }));
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
-        setDayShowSuggestions(prev => ({ ...prev, [dayId]: false }));
+        setDaySearchQueries((prev) => ({ ...prev, [dayId]: "" }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
+        setDayShowSuggestions((prev) => ({ ...prev, [dayId]: false }));
       } else {
         newExpanded.add(dayId);
       }
@@ -406,16 +400,6 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       setIsShareDialogOpen(true);
     } catch (error) {
       console.error("Failed to share trip:", error);
-    }
-  };
-
-  const handleCopyShareUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
     }
   };
 
@@ -454,83 +438,73 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <div className="min-h-screen ">
+      <div className="px-10 ms:pl-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left Side - Trip Itinerary */}
-          <div className="xl:col-span-3 flex flex-col space-y-4">
+          <div className="md:col-span-7 flex flex-col space-y-4">
             {/* Trip Header */}
-            <div className="relative overflow-hidden rounded-xl">
+            <div className="relative overflow-hidden">
               {/* Cover Image Background */}
-              <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700">
+              <div className="relative h-64 bg-transparent">
                 {trip.destinationImageUrl && (
-                  <>
+                  <div className="rounded-xl overflow-hidden">
                     <img
                       src={trip.destinationImageUrl}
                       alt={trip.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover rounded-xl overflow-hidden"
                     />
-                    <div className="absolute inset-0 bg-black/40" />
-                  </>
+                    <div className="absolute inset-0 bg-black/40 rounded-xl overflow-hidden" />
+                  </div>
                 )}
 
                 {/* Content Overlay */}
-                <div className="relative z-10 h-full flex flex-col justify-end">
-                  <div className="p-6 space-y-3">
-                    {/* Trip Title and Actions */}
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2 flex-1">
-                        <Heading className="text-2xl font-bold text-white drop-shadow-lg">
-                          {trip.name}
-                        </Heading>
-                        {trip.destinationName && (
-                          <div className="flex items-center space-x-2 text-white/90">
-                            <MapPin className="w-4 h-4" />
-                            <span className="text-sm font-medium drop-shadow">
-                              {trip.destinationName}
-                            </span>
-                          </div>
-                        )}
-                        {trip.startDate && trip.endDate && (
-                          <div className="flex items-center space-x-2 text-white/90">
-                            <Calendar className="w-4 h-4" />
-                            <span className="text-sm drop-shadow">
-                              {format(new Date(trip.startDate), "MMM d")} -{" "}
-                              {format(new Date(trip.endDate), "MMM d, yyyy")}
-                            </span>
-                          </div>
-                        )}
+                <div className="z-10 h-full flex flex-col justify-end rounded-xl overflow-hidden">
+                  {/* <div className="p-6 space-y-3"> */}
+                  {/* Trip Title and Location */}
+                  <div className="space-y-2 bg-white max-w-2/4 w-full py-4 p-10 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 -bottom-1/2 -translate-y-1/2 ">
+                    <Heading className="text-2xl font-bold text-white drop-shadow-lg">
+                      {trip.name}
+                    </Heading>
+                    {trip.destinationName && (
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm font-medium drop-shadow">
+                          {trip.destinationName}
+                        </span>
                       </div>
-                      <Button
-                        onClick={handleShareTrip}
-                        disabled={shareTrip.isPending}
-                        variant="outline"
-                        size="sm"
-                        className="bg-white/20 border-white/30 text-white hover:bg-white/30 backdrop-blur-sm"
-                      >
-                        {shareTrip.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Share className="w-4 h-4" />
-                        )}
-                        Share
-                      </Button>
-                    </div>
+                    )}
+                    {trip.startDate && trip.endDate && (
+                      <div className="flex items-center space-x-2 ">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm drop-shadow">
+                          {format(new Date(trip.startDate), "MMM d")} -{" "}
+                          {format(new Date(trip.endDate), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {/* </div> */}
+                  <div className="absolute top-2 right-2 ">
+                    <Button
+                      onClick={handleShareTrip}
+                      disabled={shareTrip.isPending}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {shareTrip.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Share className="w-4 h-4" />
+                      )}
+                      Share
+                    </Button>
                   </div>
                 </div>
               </div>
 
-              {/* Trip Description */}
-              {trip.description && (
-                <div className="p-4 bg-background/95 border-b">
-                  <p className="text-sm text-muted-foreground">
-                    {trip.description}
-                  </p>
-                </div>
-              )}
-
               {/* Trip Notes Section */}
-              <div className="p-4 bg-background/95">
+              <div className="p-4 bg-background/95 pt-16">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium flex items-center space-x-2">
@@ -544,7 +518,17 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                         onClick={() => setIsEditingNotes(true)}
                         className="text-xs"
                       >
-                        {tripNotes ? "Edit" : "Add Notes"}
+                        {tripNotes ? (
+                          <>
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Add Notes
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -553,7 +537,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                     <div className="space-y-2">
                       <Textarea
                         value={tripNotes}
-                        onChange={e => setTripNotes(e.target.value)}
+                        onChange={(e) => setTripNotes(e.target.value)}
                         placeholder="Add your personal notes about this trip..."
                         className="min-h-20 text-sm"
                         rows={3}
@@ -587,7 +571,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                     <div className="min-h-8">
                       {tripNotes ? (
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {tripNotes}
+                          ➤ {tripNotes}
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground/60 italic">
@@ -648,11 +632,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                   const showSuggestions = dayShowSuggestions[day.id] || false;
 
                   return (
-                    <Card key={day.id} className="bg-card/95 backdrop-blur-sm">
+                    <Card
+                      key={day.id}
+                      className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                    >
                       <CardContent className="p-0">
                         {/* Accordion Header */}
                         <button
-                          className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="w-full p-4 flex items-center justify-between"
                           onClick={() => toggleDayExpansion(day.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`day-content-${day.id}`}
@@ -715,14 +702,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                     placeholder="Search for restaurants, attractions, etc..."
                                     className="pl-10"
                                     value={daySearchQuery}
-                                    onChange={e =>
+                                    onChange={(e) =>
                                       handleDaySearchChange(
                                         day.id,
                                         e.target.value
                                       )
                                     }
                                     onFocus={() =>
-                                      setDayShowSuggestions(prev => ({
+                                      setDayShowSuggestions((prev) => ({
                                         ...prev,
                                         [day.id]: true,
                                       }))
@@ -730,7 +717,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                     onBlur={() => {
                                       setTimeout(
                                         () =>
-                                          setDayShowSuggestions(prev => ({
+                                          setDayShowSuggestions((prev) => ({
                                             ...prev,
                                             [day.id]: false,
                                           })),
@@ -738,7 +725,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                       );
                                     }}
                                     aria-label={`Search places for ${format(new Date(day.date), "EEEE, MMMM d")}`}
-                                    ref={el => {
+                                    ref={(el) => {
                                       daySearchInputRefs.current[day.id] = el;
                                     }}
                                   />
@@ -749,11 +736,11 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                       variant="ghost"
                                       className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
                                       onClick={() => {
-                                        setDaySearchQueries(prev => ({
+                                        setDaySearchQueries((prev) => ({
                                           ...prev,
                                           [day.id]: "",
                                         }));
-                                        setDayPlaceSuggestions(prev => ({
+                                        setDayPlaceSuggestions((prev) => ({
                                           ...prev,
                                           [day.id]: [],
                                         }));
@@ -773,7 +760,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                           <span>Searching...</span>
                                         </div>
                                       ) : dayPlaces.length > 0 ? (
-                                        dayPlaces.map(place => (
+                                        dayPlaces.map((place) => (
                                           <button
                                             key={place.place_id}
                                             type="button"
@@ -820,7 +807,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                   <DndContext
                                     sensors={sensors}
                                     collisionDetection={closestCenter}
-                                    onDragEnd={e => handleDragEnd(day, e)}
+                                    onDragEnd={(e) => handleDragEnd(day, e)}
                                   >
                                     <SortableContext
                                       items={day.places.map((p: any) => p.id)}
@@ -862,7 +849,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                       size="sm"
                                       variant="secondary"
                                       onClick={() => {
-                                        setExpandedDays(prev =>
+                                        setExpandedDays((prev) =>
                                           new Set(prev).add(day.id)
                                         );
                                         daySearchInputRefs.current[
@@ -889,7 +876,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
           </div>
 
           {/* Right Side - Google Maps */}
-          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] self-start">
+          <div className="md:col-span-5 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6  h-96 mb-10 md:h-[calc(100vh-5rem)] self-start">
             <div className="h-full flex flex-col">
               <div className="p-4 border-b">
                 <h3 className="font-semibold flex items-center space-x-2">
@@ -907,7 +894,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
                   center={
                     trip.place
                       ? {
@@ -916,7 +903,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                         }
                       : undefined
                   }
-                  onPlaceSelect={place => {
+                  onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
                   }}
@@ -928,54 +915,11 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       </div>
 
       {/* Share Dialog */}
-      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Share Trip</DialogTitle>
-            <DialogDescription>
-              Share your trip with others using this link. Anyone with the link
-              can view your trip.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Input
-                readOnly
-                value={shareUrl}
-                className="flex-1 bg-muted"
-                placeholder="Generating share URL..."
-              />
-              <Button
-                onClick={handleCopyShareUrl}
-                disabled={!shareUrl}
-                size="sm"
-                variant="outline"
-              >
-                {isCopied ? (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-          <DialogFooter className="sm:justify-start">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setIsShareDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ShareTripDialog
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        shareUrl={shareUrl}
+      />
     </div>
   );
 }
@@ -983,7 +927,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 function TripPlannerSkeleton() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
+      <div className="pl-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-6rem)]">
           {/* Left Side Skeleton */}
           <div className="space-y-6">

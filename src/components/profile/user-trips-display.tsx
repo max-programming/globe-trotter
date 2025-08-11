@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -11,13 +12,48 @@ import {
   EyeOff,
   Plus,
   Plane,
+  Ellipsis,
+  Share2,
+  Trash,
+  Loader2,
 } from "lucide-react";
 import { getUserTripsQuery } from "~/lib/queries/trips";
 import { Link } from "@tanstack/react-router";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
+import { ShareTripDialog } from "../trips/ShareTripDialog";
+import { useDeleteTrip } from "~/lib/mutations/trips/useDeleteTrip";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
 
 export function UserTripsDisplay() {
   const { data: trips } = useSuspenseQuery(getUserTripsQuery);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const shareTrip = useShareTrip();
+
+  const deleteTrip = useDeleteTrip();
+
+  const handleDeleteClick = (trip: any) => {
+    setTripToDelete({ id: trip.id, name: trip.name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
+    await deleteTrip.mutateAsync({ tripId: tripToDelete.id });
+  };
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return null;
@@ -48,6 +84,18 @@ export function UserTripsDisplay() {
         return "bg-purple-100 text-purple-700 hover:bg-purple-100";
       default:
         return "bg-gray-100 text-gray-700 hover:bg-gray-100";
+    }
+  };
+
+  const handleShareTrip = async (tripId: string) => {
+    try {
+      setSelectedTripId(tripId);
+      const result = await shareTrip.mutateAsync({ tripId });
+      const shareUrl = `${window.location.origin}/view/${result.shareId}`;
+      setShareUrl(shareUrl);
+      setIsShareDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to share trip:", error);
     }
   };
 
@@ -121,19 +169,19 @@ export function UserTripsDisplay() {
       </div>
 
       {/* Trips Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {trips.map((trip) => (
           <Card
             key={trip.id}
-            className="group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-ease overflow-hidden flex flex-col py-0"
+            className=" group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-ease overflow-hidden flex flex-col py-0 relative"
           >
             {/* Cover Image */}
-            {trip.coverImageUrl && (
+            {trip.destinationImageUrl && (
               <div className="aspect-video w-full bg-gradient-to-br from-primary-100 to-primary-200 rounded-t-xl overflow-hidden group-hover:scale-105 transition-ease">
                 <img
                   src={
-                    trip.coverImageUrl
-                      ? trip.coverImageUrl
+                    trip.destinationImageUrl
+                      ? trip.destinationImageUrl
                       : `https://api.dicebear.com/9.x/glass/svg?seed=${trip.name}`
                   }
                   alt={trip.name}
@@ -141,6 +189,41 @@ export function UserTripsDisplay() {
                 />
               </div>
             )}
+
+            {/* Fixed Dropdown Menu - positioned over the image but outside scaling container */}
+            <div className="absolute top-2 right-2 z-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="p-0 size-11 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-colors"
+                  >
+                    <Ellipsis className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => handleShareTrip(trip.id)}
+                    disabled={shareTrip.isPending && selectedTripId === trip.id}
+                  >
+                    {shareTrip.isPending && selectedTripId === trip.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Share2 className="h-4 w-4" />
+                    )}
+                    Share Trip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => handleDeleteClick(trip)}
+                  >
+                    <Trash className="h-4 w-4" />
+                    Delete Trip
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <CardHeader>
               <div className="flex items-start justify-between">
@@ -154,27 +237,6 @@ export function UserTripsDisplay() {
                   >
                     {trip.status}
                   </Badge>
-                  {trip.isPublic ? (
-                    <>
-                      <Tooltip>
-                        <TooltipTrigger>
-                          <Eye className="w-4 h-4 text-green-600 cursor-pointer" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-white">This trip is public</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <EyeOff className="w-4 h-4 text-gray-400 cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-white">This trip is private</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
                 </div>
               </div>
 
@@ -221,14 +283,46 @@ export function UserTripsDisplay() {
 
               {/* Action Button */}
               <div className="pt-2 mt-auto">
-                <Button className="w-full cursor-pointer" variant="outline">
-                  View Trip
+                <Button
+                  asChild
+                  className="w-full cursor-pointer"
+                  variant="outline"
+                >
+                  <Link to={`/trips/$tripId`} params={{ tripId: trip.id }}>
+                    View Trip
+                  </Link>
                 </Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Share Dialog */}
+      <ShareTripDialog
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        shareUrl={shareUrl}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Trip"
+        description={
+          <span>
+            Are you sure you want to delete{" "}
+            <strong>"{tripToDelete?.name}"</strong>? This action cannot be
+            undone and will permanently remove your trip and all its details.
+          </span>
+        }
+        confirmText="Delete Trip"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleteTrip.isPending}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

@@ -41,7 +41,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
   );
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays(prev => {
+    setExpandedDays((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
@@ -84,93 +84,84 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <div className="min-h-screen ">
+      <div className="px-10 ms:pl-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left Side - Trip Itinerary */}
-          <div className="xl:col-span-3 flex flex-col space-y-4">
+          <div className="md:col-span-7 flex flex-col space-y-4 pt-6">
             {/* Trip Header */}
-            <div className="relative overflow-hidden rounded-xl">
+            <div className="relative ">
               {/* Cover Image Background */}
-              <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700">
+              <div className="relative h-64 bg-transparent">
                 {trip.destinationImageUrl && (
-                  <>
+                  <div className="rounded-xl ">
                     <img
                       src={trip.destinationImageUrl}
                       alt={trip.name}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover rounded-xl "
                     />
-                    <div className="absolute inset-0 bg-black/40" />
-                  </>
+                    <div className="absolute inset-0 bg-black/40 rounded-xl " />
+                  </div>
                 )}
 
                 {/* Content Overlay */}
-                <div className="relative z-10 h-full flex flex-col justify-end">
-                  <div className="p-6 space-y-3">
-                    {/* Trip Title and View Count */}
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2 flex-1">
-                        <Heading className="text-2xl font-bold text-white drop-shadow-lg">
-                          {trip.name}
-                        </Heading>
-                        {trip.destinationName && (
-                          <div className="flex items-center space-x-2 text-white/90">
-                            <MapPin className="w-4 h-4" />
-                            <span className="text-sm font-medium drop-shadow">
-                              {trip.destinationName}
-                            </span>
-                          </div>
-                        )}
-                        {trip.startDate && trip.endDate && (
-                          <div className="flex items-center space-x-2 text-white/90">
-                            <Calendar className="w-4 h-4" />
-                            <span className="text-sm drop-shadow">
-                              {format(new Date(trip.startDate), "MMM d")} -{" "}
-                              {format(new Date(trip.endDate), "MMM d, yyyy")}
-                            </span>
-                          </div>
-                        )}
+                <div className="relative z-20 h-full flex flex-col justify-end rounded-xl">
+                  {/* Trip Title and Location */}
+                  <div className="space-y-2 bg-white max-w-2/4 w-full py-6 px-8 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 z-30">
+                    <Heading className="text-2xl font-bold text-gray-800">
+                      {trip.name}
+                    </Heading>
+                    {trip.destinationName && (
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <MapPin className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          {trip.destinationName}
+                        </span>
                       </div>
-                      {shareInfo && (
-                        <div className="bg-white/20 border-white/30 backdrop-blur-sm rounded-lg px-3 py-2">
-                          <div className="flex items-center space-x-2 text-white text-sm">
-                            <Eye className="w-4 h-4" />
-                            <span>{shareInfo.viewCount} views</span>
-                          </div>
+                    )}
+                    {trip.startDate && trip.endDate && (
+                      <div className="flex items-center space-x-2 text-gray-600">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm">
+                          {format(new Date(trip.startDate), "MMM d")} -{" "}
+                          {format(new Date(trip.endDate), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="absolute top-2 right-2 z-20">
+                    {shareInfo && (
+                      <div className="bg-white/20 border-white/30 backdrop-blur-sm rounded-lg px-3 py-2">
+                        <div className="flex items-center space-x-2 text-white text-sm">
+                          <Eye className="w-4 h-4" />
+                          <span>{shareInfo.viewCount} views</span>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Trip Description */}
-              {trip.description && (
-                <div className="p-4 bg-background/95 border-b">
-                  <p className="text-sm text-muted-foreground">
-                    {trip.description}
-                  </p>
-                </div>
-              )}
-
               {/* Trip Notes Section */}
               {trip.notes && (
-                <div className="p-4 bg-background/95">
+                <div className="p-4 bg-background/95 pt-20 mt-8">
                   <div className="space-y-3">
                     <h3 className="font-medium flex items-center space-x-2">
                       <StickyNote className="w-4 h-4" />
                       <span>Trip Notes</span>
                     </h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {trip.notes}
-                    </p>
+                    <div className="min-h-8">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        ➤ {trip.notes}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Daily Itinerary - Accordion Style */}
-            <div className="space-y-3">
+            <div className="space-y-3 mt-20">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Daily Itinerary</h2>
                 <div className="flex items-center gap-2">
@@ -212,11 +203,14 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                   const isExpanded = expandedDays.has(day.id);
 
                   return (
-                    <Card key={day.id} className="bg-card/95 backdrop-blur-sm">
+                    <Card
+                      key={day.id}
+                      className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                    >
                       <CardContent className="p-0">
                         {/* Accordion Header */}
                         <button
-                          className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                          className="w-full p-4 flex items-center justify-between"
                           onClick={() => toggleDayExpansion(day.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`day-content-${day.id}`}
@@ -286,7 +280,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                                         })
                                       }
                                       className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                                      aria-label={`View ${place.place?.name}`}
+                                      aria-label={`View ${place.place?.name || ""}`}
                                     >
                                       <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
                                         {placeIndex + 1}
@@ -306,9 +300,10 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                                         </div>
                                         {place.place?.formattedAddress && (
                                           <p className="text-xs text-muted-foreground">
-                                            {place.place.formattedAddress}
+                                            {place.place?.formattedAddress}
                                           </p>
                                         )}
+
                                         {place.userNotes && (
                                           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                                             {place.userNotes}
@@ -347,7 +342,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
           </div>
 
           {/* Right Side - Google Maps */}
-          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] self-start">
+          <div className="md:col-span-5 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6  h-96 mb-10 md:h-[calc(100vh-5rem)] self-start">
             <div className="h-full flex flex-col">
               <div className="p-4 border-b">
                 <h3 className="font-semibold flex items-center space-x-2">
@@ -365,7 +360,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
                   center={
                     trip.place
                       ? {
@@ -374,7 +369,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                         }
                       : undefined
                   }
-                  onPlaceSelect={place => {
+                  onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
                   }}

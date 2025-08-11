@@ -1,4 +1,5 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
 import BannerSlider from "~/components/core/banner-slider";
 import Search from "~/components/core/search";
 import { Heading } from "~/components/generic/heading";
@@ -9,6 +10,7 @@ import {
 } from "~/components/recommendations/RecommendationsSection";
 import { getRecommendationsQuery } from "~/lib/queries/recommendations";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
+import { Button } from "~/components/ui/button";
 import { tripStatuses } from "~/lib/db/schema/constants";
 import { Suspense } from "react";
 
@@ -16,7 +18,7 @@ const sortOptions = [
   { value: "date", label: "Date" },
   { value: "name", label: "Name" },
 ];
-const filterOptions = tripStatuses.map(status => ({
+const filterOptions = tripStatuses.map((status) => ({
   value: status,
   label: status,
 }));
@@ -62,6 +64,19 @@ function HomePage() {
             </Suspense>
           </div>
         </div>
+      </div>
+      {/* Sticky Create New Trip Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button
+          asChild
+          variant="default"
+          size="lg"
+          className="shadow-lg px-8 py-3"
+        >
+          <Link to="/trips/new">
+            <Plus className="w-4 h-4" /> Plan a Trip
+          </Link>
+        </Button>
       </div>
     </div>
   );

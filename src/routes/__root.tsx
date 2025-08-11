@@ -7,6 +7,7 @@ import {
   createRootRouteWithContext,
 } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { Toaster } from "~/components/ui/sonner";
 import { getSessionQuery } from "~/lib/queries/get-session-query";
 import appCss from "~/styles/app.css?url";
 
@@ -66,6 +67,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
           {/* <div className="absolute -bottom-40 left-20 w-80 h-80 bg-primary-100/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000" /> */}
           {children}
         </div>
+        <Toaster />
         <Scripts />
       </body>
     </html>
