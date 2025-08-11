@@ -3,55 +3,49 @@ import { Card, CardContent } from "~/components/ui/card";
 
 export function SharedTripSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary-50/30">
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+    <div className="min-h-screen ">
+      <div className="px-10 ms:pl-10">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left Side - Trip Content Skeleton */}
-          <div className="xl:col-span-3 flex flex-col space-y-4">
+          <div className="md:col-span-7 flex flex-col space-y-4">
             {/* Trip Header Skeleton */}
-            <div className="relative overflow-hidden rounded-xl">
+            <div className="relative overflow-hidden">
               {/* Cover Image Skeleton */}
-              <div className="relative h-48 bg-gradient-to-br from-primary-500 to-primary-700">
-                <Skeleton className="absolute inset-0 w-full h-full" />
+              <div className="relative h-64 bg-transparent">
+                <div className="rounded-xl overflow-hidden">
+                  <Skeleton className="absolute inset-0 w-full h-full rounded-xl" />
+                  <div className="absolute inset-0 bg-black/40 rounded-xl overflow-hidden" />
+                </div>
 
                 {/* Content Overlay Skeleton */}
-                <div className="absolute inset-0 bg-black/40" />
-                <div className="relative z-10 h-full flex flex-col justify-end">
-                  <div className="p-6 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-8 w-64 bg-white/20" />
-                        <div className="flex items-center space-x-2">
-                          <Skeleton className="w-4 h-4 bg-white/20" />
-                          <Skeleton className="h-4 w-48 bg-white/20" />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Skeleton className="w-4 h-4 bg-white/20" />
-                          <Skeleton className="h-4 w-40 bg-white/20" />
-                        </div>
-                      </div>
-                      <Skeleton className="h-8 w-16 bg-white/20" />
+                <div className="relative z-20 h-full flex flex-col justify-end rounded-xl overflow-hidden">
+                  <div className="space-y-2 bg-white max-w-2/3 w-full py-6 px-8 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 z-30">
+                    <Skeleton className="h-8 w-64 bg-gray-200" />
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="w-4 h-4 bg-gray-200" />
+                      <Skeleton className="h-4 w-48 bg-gray-200" />
                     </div>
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="w-4 h-4 bg-gray-200" />
+                      <Skeleton className="h-4 w-40 bg-gray-200" />
+                    </div>
+                  </div>
+                  <div className="absolute top-2 right-2 z-20">
+                    <Skeleton className="h-8 w-16 bg-white/20" />
                   </div>
                 </div>
               </div>
 
-              {/* Trip Description Skeleton */}
-              <div className="p-4 bg-background/95 border-b">
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-
               {/* Trip Notes Skeleton */}
-              <div className="p-4 bg-background/95">
+              <div className="p-4 bg-background/95 pt-20 mt-8">
                 <div className="space-y-3">
                   <div className="flex items-center space-x-2">
                     <Skeleton className="w-4 h-4" />
                     <Skeleton className="h-5 w-24" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="min-h-8">
                     <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-2/3 mt-2" />
                   </div>
                 </div>
               </div>
@@ -69,7 +63,10 @@ export function SharedTripSkeleton() {
 
               {/* Day Cards Skeleton */}
               {Array.from({ length: 3 }).map((_, i) => (
-                <Card key={i} className="bg-card/95 backdrop-blur-sm">
+                <Card
+                  key={i}
+                  className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                >
                   <CardContent className="p-0">
                     {/* Day Header */}
                     <div className="p-4 flex items-center justify-between">
@@ -103,7 +100,6 @@ export function SharedTripSkeleton() {
                               key={j}
                               className="p-3 rounded-lg border bg-background flex items-center gap-3"
                             >
-                              <Skeleton className="w-4 h-4" />
                               <Skeleton className="w-5 h-5 rounded-full" />
                               <div className="flex-1 space-y-2">
                                 <Skeleton className="h-4 w-full" />
@@ -122,7 +118,7 @@ export function SharedTripSkeleton() {
           </div>
 
           {/* Right Side - Map Skeleton */}
-          <div className="xl:col-span-2 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)] self-start">
+          <div className="md:col-span-5 bg-card/95 backdrop-blur-sm rounded-lg border overflow-hidden xl:sticky xl:top-6  h-96 mb-10 md:h-[calc(100vh-5rem)] self-start">
             <div className="h-full flex flex-col">
               <div className="p-4 border-b">
                 <div className="flex items-center space-x-2">
