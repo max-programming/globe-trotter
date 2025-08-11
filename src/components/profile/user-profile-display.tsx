@@ -45,8 +45,8 @@ export function UserProfileDisplay() {
     day: "numeric",
   });
 
-  const country = countries.find(c => c.id === currentUser.countryId);
-  const city = cities.find(c => c.id === currentUser.cityId);
+  const country = countries.find((c) => c.id === currentUser.countryId);
+  const city = cities.find((c) => c.id === currentUser.cityId);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -107,11 +107,7 @@ export function UserProfileDisplay() {
                 </div>
 
                 <div className="flex flex-col space-y-2 pt-2">
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
-                  >
+                  <Button asChild size="sm">
                     <Link to="/settings/profile">
                       <Edit className="w-3 h-3 mr-2" />
                       Edit Profile
