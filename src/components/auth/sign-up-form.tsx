@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -39,20 +40,16 @@ import {
   Camera,
   User,
 } from "lucide-react";
-import { countries } from "countries-list";
+import {
+  getCountriesQuery,
+  getCitiesByCountryQuery,
+} from "~/lib/queries/countries-and-cities";
 import { cn } from "~/lib/utils";
-
-// Create country list for combobox
-const countryList = Object.entries(countries)
-  .map(([code, country]) => ({
-    value: code,
-    label: country.name,
-  }))
-  .sort((a, b) => a.label.localeCompare(b.label));
 
 export function SignUpForm() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
 
   const form = useForm<SignUpFormData>({
     resolver: zodResolver(signUpSchema),
@@ -60,14 +57,25 @@ export function SignUpForm() {
       name: "",
       email: "",
       phone: "",
-      city: "",
-      country: "",
+      cityId: undefined,
+      countryId: undefined,
       additionalInfo: "",
       password: "",
       confirmPassword: "",
     },
   });
+
   const signUpMutation = useSignUp(form);
+
+  // Fetch countries using TanStack Query
+  const { data: countries = [], isLoading: isLoadingCountries } =
+    useQuery(getCountriesQuery);
+
+  // Watch the selected country to fetch cities
+  const selectedCountryId = form.watch("countryId");
+  const { data: cities = [] } = useQuery(
+    getCitiesByCountryQuery(selectedCountryId)
+  );
 
   function handleSubmit(data: SignUpFormData) {
     signUpMutation.mutate(data);
@@ -255,7 +263,7 @@ export function SignUpForm() {
                   {/* Country Combobox */}
                   <FormField
                     control={form.control}
-                    name="country"
+                    name="countryId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Country</FormLabel>
@@ -275,9 +283,9 @@ export function SignUpForm() {
                                 disabled={signUpMutation.isPending}
                               >
                                 {field.value
-                                  ? countryList.find(
-                                      country => country.value === field.value
-                                    )?.label
+                                  ? countries.find(
+                                      country => country.id === field.value
+                                    )?.name
                                   : "Select country"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
@@ -289,24 +297,24 @@ export function SignUpForm() {
                               <CommandEmpty>No country found.</CommandEmpty>
                               <ScrollArea className="h-64">
                                 <CommandGroup className="max-h-64 overflow-auto">
-                                  {countryList.map(country => (
+                                  {countries.map(country => (
                                     <CommandItem
-                                      value={country.label}
-                                      key={country.value}
+                                      value={country.name}
+                                      key={country.id}
                                       onSelect={() => {
-                                        form.setValue("country", country.value);
+                                        form.setValue("countryId", country.id);
                                         setCountryOpen(false);
                                       }}
                                     >
                                       <Check
                                         className={cn(
                                           "mr-2 h-4 w-4",
-                                          country.value === field.value
+                                          country.id === field.value
                                             ? "opacity-100"
                                             : "opacity-0"
                                         )}
                                       />
-                                      {country.label}
+                                      {country.name}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
@@ -319,21 +327,72 @@ export function SignUpForm() {
                     )}
                   />
 
+                  {/* City Combobox */}
                   <FormField
                     control={form.control}
-                    name="city"
+                    name="cityId"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="Enter your city"
-                            className="h-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                            {...field}
-                            disabled={signUpMutation.isPending}
-                          />
-                        </FormControl>
+                      <FormItem className="flex flex-col">
+                        <FormLabel>City (Optional)</FormLabel>
+                        <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "justify-between h-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={
+                                  signUpMutation.isPending || !selectedCountryId
+                                }
+                              >
+                                {field.value
+                                  ? cities.find(city => city.id === field.value)
+                                      ?.name
+                                  : selectedCountryId
+                                    ? "Select city"
+                                    : "Select country first"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0">
+                            <Command>
+                              <CommandInput placeholder="Search city..." />
+                              <CommandEmpty>
+                                {cities.length === 0 && selectedCountryId
+                                  ? "No cities available for this country."
+                                  : "No city found."}
+                              </CommandEmpty>
+                              <ScrollArea className="h-64">
+                                <CommandGroup className="max-h-64 overflow-auto">
+                                  {cities.map(city => (
+                                    <CommandItem
+                                      value={city.name}
+                                      key={city.id}
+                                      onSelect={() => {
+                                        form.setValue("cityId", city.id);
+                                        setCityOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          city.id === field.value
+                                            ? "opacity-100"
+                                            : "opacity-0"
+                                        )}
+                                      />
+                                      {city.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </ScrollArea>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <FormMessage />
                       </FormItem>
                     )}

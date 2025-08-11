@@ -18,6 +18,8 @@ function HomePage() {
       <Link to="/sign-in">Sign in</Link>
       <br />
       <Link to="/sign-up">Sign up</Link>
+      <br />
+      <Link to="/settings/profile">Settings</Link>
     </div>
   );
 }

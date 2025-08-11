@@ -13,6 +13,7 @@ import {
 export const countriesRelations = relations(countries, ({ many }) => ({
   cities: many(cities),
   tripStops: many(tripStops),
+  users: many(users),
 }));
 
 // City relations
@@ -22,6 +23,7 @@ export const citiesRelations = relations(cities, ({ one, many }) => ({
     references: [countries.id],
   }),
   tripStops: many(tripStops),
+  users: many(users),
 }));
 
 // Trip relations
