@@ -33,8 +33,22 @@
     {
       "idx": 4,
       "version": "7",
-      "when": 1754931246572,
-      "tag": "0004_bored_joystick",
+      "when": 1754918637676,
+      "tag": "0004_friendly_nekra",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1754918661398,
+      "tag": "0005__update_country_currency",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1754929783282,
+      "tag": "0006_brief_spyke",
       "breakpoints": true
     }
   ]

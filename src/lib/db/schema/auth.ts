@@ -1,8 +1,8 @@
 import { relations } from "drizzle-orm";
 import { pgTable } from "drizzle-orm/pg-core";
-import { cities, countries } from "./travel";
+import { cities, countries, trips } from "./travel";
 
-export const users = pgTable("users", t => ({
+export const users = pgTable("users", (t) => ({
   id: t.text().primaryKey(),
   name: t.text().notNull(),
   email: t.text().notNull().unique(),
@@ -13,6 +13,7 @@ export const users = pgTable("users", t => ({
   phone: t.text(),
   cityId: t.integer().references(() => cities.id),
   countryId: t.integer().references(() => countries.id),
+
   additionalInfo: t.text(),
   image: t.text(),
   createdAt: t
@@ -25,7 +26,7 @@ export const users = pgTable("users", t => ({
     .notNull(),
 }));
 
-export const sessions = pgTable("sessions", t => ({
+export const sessions = pgTable("sessions", (t) => ({
   id: t.text().primaryKey(),
   expiresAt: t.timestamp().notNull(),
   token: t.text().notNull().unique(),
@@ -39,7 +40,7 @@ export const sessions = pgTable("sessions", t => ({
     .references(() => users.id, { onDelete: "cascade" }),
 }));
 
-export const accounts = pgTable("accounts", t => ({
+export const accounts = pgTable("accounts", (t) => ({
   id: t.text().primaryKey(),
   accountId: t.text().notNull(),
   providerId: t.text().notNull(),
@@ -58,7 +59,7 @@ export const accounts = pgTable("accounts", t => ({
   updatedAt: t.timestamp().notNull(),
 }));
 
-export const verifications = pgTable("verifications", t => ({
+export const verifications = pgTable("verifications", (t) => ({
   id: t.text().primaryKey(),
   identifier: t.text().notNull(),
   value: t.text().notNull(),
@@ -78,6 +79,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.cityId],
     references: [cities.id],
   }),
+  trips: many(trips),
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
