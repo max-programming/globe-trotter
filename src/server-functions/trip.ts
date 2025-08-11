@@ -4,7 +4,7 @@ import { createTripSchema } from "~/components/trips/trip-schema";
 import { authMiddleware } from "./auth-middleware";
 import { db } from "~/lib/db";
 import { trips, places, tripPlaces, tripItinerary } from "~/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -78,61 +78,33 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
   .handler(async ({ data, context }) => {
-    // First get the trip and verify ownership
-    const trip = await db
-      .select()
-      .from(trips)
-      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
-      .limit(1);
+    const trip = await db.query.trips.findFirst({
+      where: and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)),
+      with: {
+        itinerary: {
+          with: {
+            places: {
+              with: {
+                place: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        asc(tripItinerary.date),
+        asc(tripPlaces.sortOrder),
+        asc(tripPlaces.scheduledTime),
+      ],
+    });
 
-    if (!trip.length) {
+    if (!trip) {
       throw new Error("Trip not found or access denied");
     }
 
-    // Get trip itinerary with places (now including place details from places table)
-    const itineraryData = await db
-      .select({
-        itinerary: tripItinerary,
-        tripPlace: tripPlaces,
-        place: places,
-      })
-      .from(tripItinerary)
-      .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
-      .leftJoin(places, eq(tripPlaces.placeId, places.placeId))
-      .where(eq(tripItinerary.tripId, data.tripId))
-      .orderBy(
-        tripItinerary.date,
-        tripPlaces.sortOrder,
-        tripPlaces.scheduledTime
-      );
-
-    // Group places by itinerary day
-    const itineraryWithPlaces = itineraryData.reduce(
-      (acc, row) => {
-        const itineraryId = row.itinerary.id;
-
-        if (!acc[itineraryId]) {
-          acc[itineraryId] = {
-            ...row.itinerary,
-            places: [],
-          };
-        }
-
-        if (row.tripPlace && row.place) {
-          acc[itineraryId].places.push({
-            ...row.tripPlace,
-            placeDetails: row.place,
-          });
-        }
-
-        return acc;
-      },
-      {} as Record<string, any>
-    );
-
     return {
-      trip: trip[0],
-      itinerary: Object.values(itineraryWithPlaces),
+      trip: trip,
+      itinerary: trip.itinerary,
     };
   });
 
