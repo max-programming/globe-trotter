@@ -41,6 +41,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AlertCircle as AlertCircleIcon } from "lucide-react";
 import { useCreateTrip } from "~/lib/mutations/trips/useCreateTrip";
 import { useImageUpload } from "~/lib/hooks/use-image-upload";
+import { Heading } from "~/components/generic/heading";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -178,9 +179,10 @@ const CreateTripForm = () => {
           <Globe2 className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+          <Heading>Create New Trip</Heading>
+          {/* <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
             Create New Trip
-          </h1>
+          </h1> */}
           <p className="text-muted-foreground">Plan your next adventure</p>
         </div>
       </div>

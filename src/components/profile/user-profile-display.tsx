@@ -21,6 +21,7 @@ import {
 } from "~/lib/queries/countries-and-cities";
 import { UserTripsDisplay, UserTripsSkeleton } from "./user-trips-display";
 import { Suspense } from "react";
+import { Heading } from "../generic/heading";
 
 export function UserProfileDisplay() {
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
@@ -56,9 +57,10 @@ export function UserProfileDisplay() {
           <User className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+          <Heading>My Profile</Heading>
+          {/* <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
             My Profile
-          </h1>
+          </h1> */}
           <p className="text-sm text-muted-foreground">
             View and manage your Globe Trotter profile
           </p>

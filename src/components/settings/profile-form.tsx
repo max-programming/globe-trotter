@@ -50,6 +50,7 @@ import {
   getCitiesByCountryQuery,
 } from "~/lib/queries/countries-and-cities";
 import { useImageUpload } from "~/lib/hooks/use-image-upload";
+import { Heading } from "../generic/heading";
 
 export function ProfileForm() {
   const [countryOpen, setCountryOpen] = useState(false);
@@ -128,9 +129,10 @@ export function ProfileForm() {
           <Settings className="w-6 h-6 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+          <Heading>Profile Settings</Heading>
+          {/* <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
             Profile Settings
-          </h1>
+          </h1> */}
           <p className="text-muted-foreground">
             Update your profile information and preferences
           </p>
