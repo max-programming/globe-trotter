@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -38,7 +38,6 @@ import {
   Save,
 } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
-import { countries } from "countries-list";
 import { cn } from "~/lib/utils";
 import {
   profileUpdateSchema,
@@ -46,18 +45,15 @@ import {
 } from "./profile-schemas";
 import { useUpdateProfile } from "~/lib/mutations/profile/use-update-profile";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
-
-// Create country list for combobox
-const countryList = Object.entries(countries)
-  .map(([code, country]) => ({
-    value: code,
-    label: country.name,
-  }))
-  .sort((a, b) => a.label.localeCompare(b.label));
+import {
+  getCountriesQuery,
+  getCitiesByCountryQuery,
+} from "~/lib/queries/countries-and-cities";
 
 export function ProfileForm() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
 
   // Fetch current user data
   const { data: currentUser } = useSuspenseQuery(getCurrentUserQuery);
@@ -65,17 +61,26 @@ export function ProfileForm() {
   const form = useForm<ProfileUpdateFormData>({
     resolver: zodResolver(profileUpdateSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      city: "",
-      country: "",
-      additionalInfo: "",
-      image: "",
+      name: currentUser?.name || "",
+      email: currentUser?.email || "",
+      phone: currentUser?.phone || "",
+      cityId: currentUser?.cityId || undefined,
+      countryId: currentUser?.countryId || undefined,
+      additionalInfo: currentUser?.additionalInfo || "",
+      image: currentUser?.image || "",
     },
   });
 
   const updateProfileMutation = useUpdateProfile(form);
+
+  // Fetch countries using TanStack Query
+  const { data: countries = [] } = useQuery(getCountriesQuery);
+
+  // Watch the selected country to fetch cities
+  const selectedCountryId = form.watch("countryId");
+  const { data: cities = [] } = useQuery(
+    getCitiesByCountryQuery(selectedCountryId)
+  );
 
   // Update form when user data is loaded
   useEffect(() => {
@@ -84,8 +89,8 @@ export function ProfileForm() {
         name: currentUser.name || "",
         email: currentUser.email || "",
         phone: currentUser.phone || "",
-        city: currentUser.city || "",
-        country: currentUser.country || "",
+        cityId: currentUser.cityId || undefined,
+        countryId: currentUser.countryId || undefined,
         additionalInfo: currentUser.additionalInfo || "",
         image: currentUser.image || "",
       });
@@ -304,29 +309,10 @@ export function ProfileForm() {
                   </h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="city"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City (Optional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="text"
-                            placeholder="Enter your city"
-                            className="h-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                            {...field}
-                            disabled={updateProfileMutation.isPending}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   {/* Country Combobox */}
                   <FormField
                     control={form.control}
-                    name="country"
+                    name="countryId"
                     render={({ field }) => (
                       <FormItem className="flex flex-col">
                         <FormLabel>Country (Optional)</FormLabel>
@@ -346,9 +332,9 @@ export function ProfileForm() {
                                 disabled={updateProfileMutation.isPending}
                               >
                                 {field.value
-                                  ? countryList.find(
-                                      country => country.value === field.value
-                                    )?.label
+                                  ? countries.find(
+                                      country => country.id === field.value
+                                    )?.name
                                   : "Select country"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
@@ -359,24 +345,93 @@ export function ProfileForm() {
                               <CommandInput placeholder="Search country..." />
                               <CommandEmpty>No country found.</CommandEmpty>
                               <CommandGroup className="max-h-64 overflow-auto">
-                                {countryList.map(country => (
+                                {countries.map(country => (
                                   <CommandItem
-                                    value={country.label}
-                                    key={country.value}
+                                    value={country.name}
+                                    key={country.id}
                                     onSelect={() => {
-                                      form.setValue("country", country.value);
+                                      form.setValue("countryId", country.id);
                                       setCountryOpen(false);
                                     }}
                                   >
                                     <Check
                                       className={cn(
                                         "mr-2 h-4 w-4",
-                                        country.value === field.value
+                                        country.id === field.value
                                           ? "opacity-100"
                                           : "opacity-0"
                                       )}
                                     />
-                                    {country.label}
+                                    {country.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  {/* City Combobox */}
+                  <FormField
+                    control={form.control}
+                    name="cityId"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>City (Optional)</FormLabel>
+                        <Popover open={cityOpen} onOpenChange={setCityOpen}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "justify-between h-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                                disabled={
+                                  updateProfileMutation.isPending ||
+                                  !selectedCountryId
+                                }
+                              >
+                                {field.value
+                                  ? cities.find(city => city.id === field.value)
+                                      ?.name
+                                  : selectedCountryId
+                                    ? "Select city"
+                                    : "Select country first"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 popover-content-width-full">
+                            <Command>
+                              <CommandInput placeholder="Search city..." />
+                              <CommandEmpty>
+                                {cities.length === 0 && selectedCountryId
+                                  ? "No cities available for this country."
+                                  : "No city found."}
+                              </CommandEmpty>
+                              <CommandGroup className="max-h-64 overflow-auto">
+                                {cities.map(city => (
+                                  <CommandItem
+                                    value={city.name}
+                                    key={city.id}
+                                    onSelect={() => {
+                                      form.setValue("cityId", city.id);
+                                      setCityOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        city.id === field.value
+                                          ? "opacity-100"
+                                          : "opacity-0"
+                                      )}
+                                    />
+                                    {city.name}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>

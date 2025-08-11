@@ -18,7 +18,8 @@ export const updateProfile = createServerFn({ method: "POST" })
       throw new Error("Unauthorized");
     }
 
-    const { name, email, phone, city, country, additionalInfo, image } = data;
+    const { name, email, phone, cityId, countryId, additionalInfo, image } =
+      data;
 
     // Update user profile
     await db
@@ -27,8 +28,8 @@ export const updateProfile = createServerFn({ method: "POST" })
         name,
         email,
         phone,
-        city,
-        country,
+        cityId,
+        countryId,
         additionalInfo,
         image,
         updatedAt: new Date(),
@@ -49,6 +50,14 @@ export const getCurrentUser = createServerFn({ method: "GET" }).handler(
 
     const user = await db.query.users.findFirst({
       where: eq(users.id, session.user.id),
+      with: {
+        country: true,
+        city: {
+          with: {
+            country: true,
+          },
+        },
+      },
     });
 
     return user || null;

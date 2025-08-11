@@ -6,14 +6,14 @@ export async function updateUserPostSignUp(
   userId: string,
   signUpData: SignUpFormData
 ) {
-  const { phone, city, country, additionalInfo } = signUpData;
+  const { phone, cityId, countryId, additionalInfo } = signUpData;
 
   await db
     .update(users)
     .set({
       phone,
-      city,
-      country,
+      cityId,
+      countryId,
       additionalInfo,
     })
     .where(eq(users.id, userId));

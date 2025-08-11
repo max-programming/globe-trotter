@@ -14,6 +14,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as protectedRouteRouteImport } from './routes/(protected)/route'
 import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as protectedIndexRouteImport } from './routes/(protected)/index'
+import { Route as protectedProfileRouteImport } from './routes/(protected)/profile'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedSettingsProfileRouteImport } from './routes/(protected)/settings/profile'
@@ -32,6 +33,11 @@ const authRouteRoute = authRouteRouteImport.update({
 const protectedIndexRoute = protectedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => protectedRouteRoute,
+} as any)
+const protectedProfileRoute = protectedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => protectedRouteRoute,
 } as any)
 const authSignUpRoute = authSignUpRouteImport.update({
@@ -60,12 +66,14 @@ export interface FileRoutesByFullPath {
   '/': typeof protectedIndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof protectedIndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/profile': typeof protectedProfileRoute
   '/settings/profile': typeof protectedSettingsProfileRoute
 }
 export interface FileRoutesById {
@@ -74,20 +82,22 @@ export interface FileRoutesById {
   '/(protected)': typeof protectedRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
+  '/(protected)/profile': typeof protectedProfileRoute
   '/(protected)/': typeof protectedIndexRoute
   '/(protected)/settings/profile': typeof protectedSettingsProfileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-up' | '/settings/profile'
+  fullPaths: '/' | '/sign-in' | '/sign-up' | '/profile' | '/settings/profile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/sign-up' | '/settings/profile'
+  to: '/' | '/sign-in' | '/sign-up' | '/profile' | '/settings/profile'
   id:
     | '__root__'
     | '/(auth)'
     | '/(protected)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
+    | '/(protected)/profile'
     | '/(protected)/'
     | '/(protected)/settings/profile'
   fileRoutesById: FileRoutesById
@@ -141,6 +151,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof protectedIndexRouteImport
       parentRoute: typeof protectedRouteRoute
     }
+    '/(protected)/profile': {
+      id: '/(protected)/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof protectedProfileRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
     '/(auth)/sign-up': {
       id: '/(auth)/sign-up'
       path: '/sign-up'
@@ -191,11 +208,13 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface protectedRouteRouteChildren {
+  protectedProfileRoute: typeof protectedProfileRoute
   protectedIndexRoute: typeof protectedIndexRoute
   protectedSettingsProfileRoute: typeof protectedSettingsProfileRoute
 }
 
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
+  protectedProfileRoute: protectedProfileRoute,
   protectedIndexRoute: protectedIndexRoute,
   protectedSettingsProfileRoute: protectedSettingsProfileRoute,
 }
