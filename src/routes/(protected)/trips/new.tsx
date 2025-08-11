@@ -47,6 +47,8 @@ import {
   createTripSchema,
   type CreateTripFormData,
 } from "~/components/trips/trip-schema";
+import { getLatLng } from "~/server-functions/get-lat-lng";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -72,6 +74,7 @@ interface GooglePlaceSuggestion {
 }
 
 const NewTripForm = () => {
+  const getLatLngFn = useServerFn(getLatLng);
   const [placeSuggestions, setPlaceSuggestions] = useState<
     GooglePlaceSuggestion[]
   >([]);
@@ -189,8 +192,9 @@ const NewTripForm = () => {
     }
   };
 
-  const handlePlaceSelect = (place: GooglePlaceSuggestion) => {
+  const handlePlaceSelect = async (place: GooglePlaceSuggestion) => {
     setSelectedPlace(place);
+    const latLng = await getLatLngFn({ data: { placeId: place.place_id } });
     form.setValue("destination", place.description);
     form.setValue("place", {
       place_id: place.place_id,
@@ -198,6 +202,8 @@ const NewTripForm = () => {
       main_text: place.main_text,
       secondary_text: place.secondary_text,
       types: place.types,
+      latitude: latLng.lat,
+      longitude: latLng.lng,
     });
     setShowSuggestions(false);
 

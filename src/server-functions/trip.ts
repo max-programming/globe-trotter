@@ -26,6 +26,8 @@ export const createTrip = createServerFn({ method: "POST" })
           mainText: data.place.main_text,
           secondaryText: data.place.secondary_text || null,
           placeTypes: data.place.types,
+          latitude: data.place.latitude,
+          longitude: data.place.longitude,
           createdAt: new Date(),
           updatedAt: new Date(),
         })
