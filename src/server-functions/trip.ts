@@ -100,7 +100,11 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
       .leftJoin(tripPlaces, eq(tripItinerary.id, tripPlaces.tripItineraryId))
       .leftJoin(places, eq(tripPlaces.placeId, places.placeId))
       .where(eq(tripItinerary.tripId, data.tripId))
-      .orderBy(tripItinerary.date, tripPlaces.scheduledTime);
+      .orderBy(
+        tripItinerary.date,
+        tripPlaces.sortOrder,
+        tripPlaces.scheduledTime
+      );
 
     // Group places by itinerary day
     const itineraryWithPlaces = itineraryData.reduce(
@@ -206,11 +210,20 @@ export const createPlace = createServerFn({ method: "POST" })
       throw new Error("Place not found. Please search for the place first.");
     }
 
+    // Determine next sort order for the day
+    const existingForDay = await db
+      .select({ id: tripPlaces.id })
+      .from(tripPlaces)
+      .where(eq(tripPlaces.tripItineraryId, data.tripItineraryId));
+
+    const nextSort = existingForDay.length;
+
     const [newTripPlace] = await db
       .insert(tripPlaces)
       .values({
         tripItineraryId: data.tripItineraryId,
         placeId: data.placeId,
+        sortOrder: nextSort,
         scheduledTime: data.scheduledTime,
         userNotes: data.userNotes,
         visitDuration: data.visitDuration,
@@ -230,6 +243,7 @@ export const updatePlace = createServerFn({ method: "POST" })
       visitDuration: z.number().optional(),
       isVisited: z.boolean().optional(),
       userRating: z.number().min(1).max(5).optional(),
+      sortOrder: z.number().optional(),
     })
   )
   .middleware([authMiddleware])
@@ -262,6 +276,7 @@ export const updatePlace = createServerFn({ method: "POST" })
       updateData.visitDuration = data.visitDuration;
     if (data.isVisited !== undefined) updateData.isVisited = data.isVisited;
     if (data.userRating !== undefined) updateData.userRating = data.userRating;
+    if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
 
     const [updatedPlace] = await db
       .update(tripPlaces)

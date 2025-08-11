@@ -18,9 +18,9 @@ export function useCreatePlace() {
     },
     onSuccess: () => {
       // Invalidate trip itinerary queries to refetch the updated data
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ["trips"],
-        type: "all" 
+        type: "all",
       });
     },
   });
@@ -38,13 +38,14 @@ export function useUpdatePlace() {
       visitDuration?: number;
       isVisited?: boolean;
       userRating?: number; // 1-5 stars
+      sortOrder?: number;
     }) => {
       return await updatePlaceFn({ data });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ["trips"],
-        type: "all" 
+        type: "all",
       });
     },
   });
@@ -59,9 +60,9 @@ export function useDeletePlace() {
       return await deletePlaceFn({ data });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
+      queryClient.invalidateQueries({
         queryKey: ["trips"],
-        type: "all" 
+        type: "all",
       });
     },
   });

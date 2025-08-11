@@ -183,6 +183,7 @@ export const tripPlaces = pgTable(
       .notNull()
       .references(() => places.placeId, { onDelete: "restrict" }),
     // User-specific fields for this place in their itinerary
+    sortOrder: t.integer().notNull().default(0),
     scheduledTime: t.time(),
     userNotes: t.text(),
     isVisited: t.boolean().default(false).notNull(),
@@ -204,6 +205,10 @@ export const tripPlaces = pgTable(
     placeIdx: index("trip_places_place_idx").on(table.placeId),
     scheduledTimeIdx: index("trip_places_scheduled_time_idx").on(
       table.scheduledTime
+    ),
+    itinerarySortIdx: index("trip_places_itinerary_sort_idx").on(
+      table.tripItineraryId,
+      table.sortOrder
     ),
   })
 );
