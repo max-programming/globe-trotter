@@ -3,11 +3,26 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { z } from "zod";
+import { useQuery } from "@tanstack/react-query";
+import { type DateRange } from "react-day-picker";
 
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
-import { DatePicker } from "~/components/ui/DatePicker";
 import { Input } from "~/components/ui/input";
+import { Calendar } from "~/components/ui/calendar";
+import { Label } from "~/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import {
   Form,
   FormControl,
@@ -16,24 +31,22 @@ import {
   FormLabel,
   FormMessage,
 } from "~/components/ui/form";
-import { Calendar, Globe2, MapPin, ArrowRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  Globe2,
+  MapPin,
+  ArrowRight,
+  ChevronDownIcon,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { Heading } from "~/components/generic/heading";
-
-// Schema for the new simplified trip creation form
-const newTripSchema = z
-  .object({
-    destination: z.string().min(1, "Please select a destination"),
-    startDate: z.date({ message: "Start date is required" }),
-    endDate: z.date({ message: "End date is required" }),
-  })
-  .refine(
-    data => {
-      return data.endDate >= data.startDate;
-    },
-    { path: ["endDate"], message: "End date cannot be before start date" }
-  );
-
-type NewTripFormData = z.infer<typeof newTripSchema>;
+import { getPexelsImageQuery } from "~/lib/queries/pexels";
+import { useCreateTrip } from "~/lib/mutations/trips/useCreateTrip";
+import {
+  createTripSchema,
+  type CreateTripFormData,
+} from "~/components/trips/trip-schema";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -65,20 +78,41 @@ const NewTripForm = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedPlace, setSelectedPlace] =
     useState<GooglePlaceSuggestion | null>(null);
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [imageQuery, setImageQuery] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(),
+    to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+  });
+
+  // Use React Query for Pexels image search
+  const { data: imageResult, isLoading: isLoadingImage } = useQuery(
+    getPexelsImageQuery(imageQuery)
+  );
 
   // Debouncing refs
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const form = useForm<NewTripFormData>({
-    resolver: zodResolver(newTripSchema),
+  const form = useForm<CreateTripFormData>({
+    resolver: zodResolver(createTripSchema),
     defaultValues: {
       destination: "",
       startDate: new Date(),
       endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      visibility: "private" as const,
+      place: {
+        place_id: "",
+        description: "",
+        main_text: "",
+        secondary_text: "",
+        types: [],
+      },
+      imageUrl: undefined,
     },
   });
+
+  // Create trip mutation
+  const createTripMutation = useCreateTrip(form);
 
   // Call Google Places Autocomplete API via our server route with debouncing
   const searchPlaces = useCallback(async (query: string) => {
@@ -158,7 +192,17 @@ const NewTripForm = () => {
   const handlePlaceSelect = (place: GooglePlaceSuggestion) => {
     setSelectedPlace(place);
     form.setValue("destination", place.description);
+    form.setValue("place", {
+      place_id: place.place_id,
+      description: place.description,
+      main_text: place.main_text,
+      secondary_text: place.secondary_text,
+      types: place.types,
+    });
     setShowSuggestions(false);
+
+    // Fetch image for the selected place
+    fetchDestinationImage(place.main_text);
   };
 
   // Hide suggestions when clicking outside
@@ -169,67 +213,36 @@ const NewTripForm = () => {
     }, 150);
   };
 
-  // Simulate Unsplash API call
-  const fetchDestinationImage = async (destination: string) => {
-    setIsLoadingImage(true);
-    try {
-      // Mock Unsplash API response
-      const mockImageUrl = `https://images.unsplash.com/photo-1560472355-a9a8a45e9e5b?q=80&w=1000&auto=format&fit=crop&ixlib=rb-4.0.3&search=${encodeURIComponent(destination)}`;
-
-      console.log(`🖼️  Fetched image for "${destination}":`, mockImageUrl);
-
-      // In real implementation, you'd make actual API call:
-      // const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(destination)}&per_page=1`, {
-      //   headers: {
-      //     'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
-      //   }
-      // });
-      // const data = await response.json();
-      // const imageUrl = data.results[0]?.urls?.regular;
-
-      return mockImageUrl;
-    } catch (error) {
-      console.error("Failed to fetch destination image:", error);
-      return null;
-    } finally {
-      setIsLoadingImage(false);
-    }
+  // Trigger image search for destination
+  const fetchDestinationImage = (destination: string) => {
+    setImageQuery(destination);
   };
 
-  const handleSubmit = async (data: NewTripFormData) => {
+  // Sync dateRange with form values
+  useEffect(() => {
+    if (dateRange?.from && dateRange?.to) {
+      form.setValue("startDate", dateRange.from);
+      form.setValue("endDate", dateRange.to);
+    }
+  }, [dateRange, form]);
+
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    setDateRange(range);
+  };
+
+  const handleSubmit = (data: CreateTripFormData) => {
     console.log("🚀 Creating trip:", data);
 
-    if (selectedPlace) {
-      console.log("📍 Selected place:", selectedPlace);
-      await fetchDestinationImage(selectedPlace.main_text);
-    }
+    // Add the Pexels image URL if available
+    const tripData: CreateTripFormData = {
+      ...data,
+      imageUrl: imageResult?.success ? imageResult.imageUrl : undefined,
+    };
 
-    // Here you would normally save the trip to database
-    // For now, just show success
-    alert(`Trip to ${data.destination} created successfully!`);
-  };
+    console.log("📍 Trip data with image:", tripData);
 
-  const handleStartDateChange = (date?: Date) => {
-    if (date) {
-      form.setValue("startDate", date);
-
-      // Adjust end date if it's before start date
-      const currentEndDate = form.getValues("endDate");
-      if (currentEndDate < date) {
-        form.setValue("endDate", date);
-      }
-    }
-  };
-
-  const handleEndDateChange = (date?: Date) => {
-    if (date) {
-      const startDate = form.getValues("startDate");
-
-      // Don't allow end date before start date
-      if (date >= startDate) {
-        form.setValue("endDate", date);
-      }
-    }
+    // Create the trip using the mutation
+    createTripMutation.mutate(tripData);
   };
 
   return (
@@ -332,62 +345,132 @@ const NewTripForm = () => {
               <div className="space-y-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-white" />
+                    <CalendarIcon className="w-4 h-4 text-white" />
                   </div>
                   <h3 className="text-lg font-semibold text-foreground">
                     When are you traveling?
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base">Start Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            date={field.value}
-                            setDate={handleStartDateChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base">End Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            date={field.value}
-                            setDate={handleEndDateChange}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex flex-col gap-3">
+                  <Label htmlFor="dates" className="text-base font-medium">
+                    Select your travel dates
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="dates"
+                        className="h-14 justify-between font-normal text-left"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <CalendarIcon className="w-5 h-5 text-muted-foreground" />
+                          <span className="text-lg">
+                            {dateRange?.from && dateRange?.to
+                              ? `${dateRange.from.toLocaleDateString()} - ${dateRange.to.toLocaleDateString()}`
+                              : "Select travel dates"}
+                          </span>
+                        </div>
+                        <ChevronDownIcon className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-auto overflow-hidden p-0"
+                      align="start"
+                    >
+                      <Calendar
+                        mode="range"
+                        selected={dateRange}
+                        onSelect={handleDateRangeSelect}
+                        captionLayout="dropdown"
+                        numberOfMonths={2}
+                        disabled={date => date < new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
+
+              {/* Visibility */}
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                    <Eye className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Trip visibility
+                  </h3>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="visibility"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">
+                        Who can see this trip?
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-14 text-lg">
+                            <div className="flex items-center space-x-3">
+                              <SelectValue placeholder="Select visibility" />
+                            </div>
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="private">
+                            <div className="flex items-center space-x-2">
+                              <EyeOff className="w-4 h-4" />
+                              <span>Private</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="public">
+                            <div className="flex items-center space-x-2">
+                              <Eye className="w-4 h-4" />
+                              <span>Public</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Error Display */}
+              {createTripMutation.error && (
+                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-destructive text-sm font-medium">
+                    {createTripMutation.error.message}
+                  </p>
+                </div>
+              )}
 
               {/* Continue Button */}
               <div className="pt-6">
                 <Button
                   type="submit"
-                  disabled={!selectedPlace || isLoadingImage}
+                  disabled={
+                    !selectedPlace ||
+                    !dateRange?.from ||
+                    !dateRange?.to ||
+                    createTripMutation.isPending
+                  }
                   className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02]"
                 >
-                  {isLoadingImage ? (
-                    "Loading image..."
+                  {createTripMutation.isPending ? (
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Creating trip...</span>
+                    </div>
                   ) : (
                     <>
-                      Continue
+                      Create Trip
                       <ArrowRight className="w-5 h-5 ml-2" />
                     </>
                   )}

@@ -13,11 +13,12 @@ import { users } from "./auth";
 import { nanoid } from "nanoid";
 import { activityCategories, tripStatuses } from "./constants";
 
-export const countries = pgTable("countries", t => ({
+export const countries = pgTable("countries", (t) => ({
   id: t.serial().primaryKey(),
   name: t.text().notNull(),
   code: t.text().notNull(), // ISO 3166-1 alpha-2 code
   region: t.text(), // continent/region
+  currency: t.text(), // ISO 4217 currency code
   createdAt: t
     .timestamp()
     .$defaultFn(() => new Date())
@@ -31,7 +32,7 @@ export const countries = pgTable("countries", t => ({
 // Cities master table - global destination data
 export const cities = pgTable(
   "cities",
-  t => ({
+  (t) => ({
     id: t.serial().primaryKey(),
     name: t.text().notNull(),
     countryId: t
@@ -53,7 +54,7 @@ export const cities = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  table => ({
+  (table) => ({
     countryIdx: index("cities_country_idx").on(table.countryId),
     cityCountryIdx: index("cities_city_country_idx").on(
       table.countryId,
@@ -64,13 +65,47 @@ export const cities = pgTable(
   })
 );
 
+export const places = pgTable(
+  "places",
+  (t) => ({
+    id: t.serial().primaryKey(),
+    placeId: t.text().notNull().unique(),
+    name: t.text().notNull(),
+    formattedAddress: t.text().notNull(),
+    mainText: t.text().notNull(),
+    secondaryText: t.text(),
+    placeTypes: t.text().array(),
+    latitude: t.doublePrecision(),
+    longitude: t.doublePrecision(),
+    countryCode: t.text(),
+    countryName: t.text(),
+    administrativeLevels: t.jsonb(),
+    timezone: t.text(),
+    photoReference: t.text(),
+    createdAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (table) => ({
+    placeIdIdx: index("places_place_id_idx").on(table.placeId),
+    countryCodeIdx: index("places_country_code_idx").on(table.countryCode),
+    placeTypesIdx: index("places_place_types_idx").on(table.placeTypes),
+    nameIdx: index("places_name_idx").on(table.name),
+  })
+);
+
 // Enums for better type safety and data integrity
 export const tripStatusEnum = pgEnum("trip_status", tripStatuses);
 
 // Main trips table
 export const trips = pgTable(
   "trips",
-  t => ({
+  (t) => ({
     id: t
       .text()
       .primaryKey()
@@ -83,7 +118,11 @@ export const trips = pgTable(
     status: tripStatusEnum().default("draft").notNull(),
     totalBudget: t.doublePrecision(),
     isPublic: t.boolean().default(false).notNull(),
-
+    placeId: t
+      .text()
+      .references(() => places.placeId, { onDelete: "set null" }),
+    destinationName: t.text(),
+    destinationImageUrl: t.text(),
     userId: t
       .text()
       .notNull()
@@ -97,7 +136,7 @@ export const trips = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  table => ({
+  (table) => ({
     userIdx: index("trips_user_idx").on(table.userId),
     statusIdx: index("trips_status_idx").on(table.status),
     publicIdx: index("trips_public_idx").on(table.isPublic),
@@ -105,10 +144,69 @@ export const trips = pgTable(
   })
 );
 
+export const tripItinerary = pgTable(
+  "trip_itinerary",
+  (t) => ({
+    id: t.serial().primaryKey(),
+    tripId: t
+      .text()
+      .notNull()
+      .references(() => trips.id, { onDelete: "cascade" }),
+    date: t.date().notNull(),
+    notes: t.text(),
+    createdAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (table) => ({
+    tripIdx: index("trip_itinerary_trip_idx").on(table.tripId),
+    dateIdx: index("trip_itinerary_date_idx").on(table.date),
+  })
+);
+
+export const tripPlaces = pgTable(
+  "trip_places",
+  (t) => ({
+    id: t.serial().primaryKey(),
+    tripItineraryId: t
+      .integer()
+      .notNull()
+      .references(() => tripItinerary.id, { onDelete: "cascade" }),
+    placeId: t
+      .text()
+      .notNull()
+      .references(() => places.placeId, { onDelete: "restrict" }),
+    name: t.text().notNull(),
+    type: t.text().notNull(),
+    description: t.text(),
+    time: t.time(),
+    notes: t.text(),
+    createdAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: t
+      .timestamp()
+      .$defaultFn(() => new Date())
+      .notNull(),
+  }),
+  (table) => ({
+    tripItineraryIdx: index("trip_places_trip_itinerary_idx").on(
+      table.tripItineraryId
+    ),
+    placeIdx: index("trip_places_place_idx").on(table.placeId),
+  })
+);
+
 // Trip stops - cities added to specific trips with order and dates
 export const tripStops = pgTable(
   "trip_stops",
-  t => ({
+  (t) => ({
     id: t
       .text()
       .primaryKey()
@@ -139,7 +237,7 @@ export const tripStops = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  table => ({
+  (table) => ({
     tripIdx: index("trip_stops_trip_idx").on(table.tripId),
     orderIdx: index("trip_stops_order_idx").on(table.tripId, table.stopOrder),
     datesIdx: index("trip_stops_dates_idx").on(
@@ -158,39 +256,6 @@ export const tripStops = pgTable(
 export const activityCategoryEnum = pgEnum(
   "activity_category",
   activityCategories
-);
-
-// Trip activities - activities assigned to specific trip stops
-export const tripStopActivities = pgTable(
-  "trip_stop_activities",
-  t => ({
-    id: t.serial().primaryKey(),
-    tripStopId: t
-      .text()
-      .notNull()
-      .references(() => tripStops.id, { onDelete: "cascade" }),
-    activityCategory: activityCategoryEnum().notNull(),
-    activityName: t.text().notNull(),
-    scheduledDate: t.timestamp(),
-    actualCost: t.doublePrecision(),
-    notes: t.text(),
-    isCompleted: t.boolean().default(false),
-    createdAt: t
-      .timestamp()
-      .$defaultFn(() => new Date())
-      .notNull(),
-    updatedAt: t
-      .timestamp()
-      .$defaultFn(() => new Date())
-      .notNull(),
-  }),
-  table => ({
-    stopIdx: index("trip_activities_stop_idx").on(table.tripStopId),
-    activityCategoryIdx: index("trip_activities_activity_category_idx").on(
-      table.activityCategory
-    ),
-    dateIdx: index("trip_activities_date_idx").on(table.scheduledDate),
-  })
 );
 
 // export const expenseCategoryEnum = pgEnum("expense_category", [
@@ -242,7 +307,7 @@ export const tripStopActivities = pgTable(
 // Trip sharing and collaboration
 export const sharedTrips = pgTable(
   "shared_trips",
-  t => ({
+  (t) => ({
     id: t
       .text()
       .primaryKey()
@@ -265,7 +330,7 @@ export const sharedTrips = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   }),
-  table => ({
+  (table) => ({
     tripIdx: index("shared_trips_trip_idx").on(table.tripId),
     tokenIdx: index("shared_trips_token_idx").on(table.shareToken),
     activeIdx: index("shared_trips_active_idx").on(table.isActive),

@@ -4,15 +4,14 @@ import {
   cities,
   countries,
   trips,
-  tripStops,
-  tripStopActivities,
+  tripItinerary,
+  tripPlaces,
   sharedTrips,
 } from "./travel";
 
 // Country relations
 export const countriesRelations = relations(countries, ({ many }) => ({
   cities: many(cities),
-  tripStops: many(tripStops),
   users: many(users),
 }));
 
@@ -22,7 +21,6 @@ export const citiesRelations = relations(cities, ({ one, many }) => ({
     fields: [cities.countryId],
     references: [countries.id],
   }),
-  tripStops: many(tripStops),
   users: many(users),
 }));
 
@@ -32,37 +30,26 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
     fields: [trips.userId],
     references: [users.id],
   }),
-  tripStops: many(tripStops),
+  itinerary: many(tripItinerary),
   sharedTrips: many(sharedTrips),
 }));
 
-// Trip stops relations
-export const tripStopsRelations = relations(tripStops, ({ one, many }) => ({
+// Trip itinerary relations
+export const tripItineraryRelations = relations(tripItinerary, ({ one, many }) => ({
   trip: one(trips, {
-    fields: [tripStops.tripId],
+    fields: [tripItinerary.tripId],
     references: [trips.id],
   }),
-  country: one(countries, {
-    fields: [tripStops.countryId],
-    references: [countries.id],
-  }),
-  city: one(cities, {
-    fields: [tripStops.cityId],
-    references: [cities.id],
-  }),
-  activities: many(tripStopActivities),
+  places: many(tripPlaces),
 }));
 
-// Trip activities relations
-export const tripActivitiesRelations = relations(
-  tripStopActivities,
-  ({ one }) => ({
-    tripStop: one(tripStops, {
-      fields: [tripStopActivities.tripStopId],
-      references: [tripStops.id],
-    }),
-  })
-);
+// Trip places relations
+export const tripPlacesRelations = relations(tripPlaces, ({ one }) => ({
+  itinerary: one(tripItinerary, {
+    fields: [tripPlaces.tripItineraryId],
+    references: [tripItinerary.id],
+  }),
+}));
 
 // Shared trips relations
 export const sharedTripsRelations = relations(sharedTrips, ({ one }) => ({
