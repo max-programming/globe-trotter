@@ -18,6 +18,12 @@ export function useCreatePlace() {
       scheduledTime?: string; // HH:MM format
       userNotes?: string;
       visitDuration?: number; // in minutes
+      // Optional place details for atomic upsert
+      placeName?: string;
+      formattedAddress?: string;
+      mainText?: string;
+      secondaryText?: string;
+      placeTypes?: string[];
     }) => {
       return await createPlaceFn({ data });
     },
@@ -65,10 +71,7 @@ export function useDeletePlace() {
       return await deletePlaceFn({ data });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["trips"],
-        type: "all",
-      });
+      queryClient.invalidateQueries({ queryKey: ["trips"], type: "all" });
     },
   });
 }

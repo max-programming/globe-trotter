@@ -43,7 +43,7 @@ export const ServerRoute = createServerFileRoute(
       // Validate query parameters
       const validatedQuery = autocompleteQuerySchema.parse(queryParams);
 
-      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
+      const googleApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
       if (!googleApiKey) {
         return Response.json(
           { error: "Google Maps API key not configured" },
@@ -86,7 +86,7 @@ export const ServerRoute = createServerFileRoute(
       }
 
       // Transform Google response to our format
-      const suggestions = data.predictions.map(prediction => ({
+      const suggestions = data.predictions.map((prediction) => ({
         place_id: prediction.place_id,
         description: prediction.description,
         main_text: prediction.structured_formatting.main_text,

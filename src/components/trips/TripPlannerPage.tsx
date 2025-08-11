@@ -28,6 +28,7 @@ import {
   useCreatePlace,
   useUpdatePlace,
   useReorderTripPlaces,
+  useDeletePlace,
 } from "~/lib/mutations/trips/usePlaces";
 import {
   DndContext,
@@ -48,6 +49,7 @@ import { upsertPlace } from "~/server-functions/trip";
 import { Heading } from "../generic/heading";
 import { TripMap } from "../maps/TripMap";
 import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
+import { toast } from "sonner";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -87,6 +89,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const daySearchInputRefs = useRef<Record<number, HTMLInputElement | null>>(
     {}
   );
+  const dayCardRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const { data, isLoading, error } = useQuery(
     getTripWithItineraryQuery(tripId)
@@ -94,6 +97,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const createPlaceMutation = useCreatePlace();
   const updatePlaceMutation = useUpdatePlace();
   const reorderPlacesMutation = useReorderTripPlaces();
+  const deletePlaceMutation = useDeletePlace();
   const upsertPlaceFn = useServerFn(upsertPlace);
   const updateTripNotesMutation = useUpdateTripNotes();
   // DnD sensors
@@ -144,6 +148,24 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     }
   };
 
+  const handleDeletePlace = async (tripPlaceId: number) => {
+    try {
+      await deletePlaceMutation.mutateAsync({ tripPlaceId });
+      // Optionally update cache immediately for snappier UX
+      queryClient.setQueryData(["trips", tripId, "itinerary"], (prev: any) => {
+        if (!prev) return prev;
+        const next = { ...prev };
+        next.itinerary = prev.itinerary.map((d: any) => ({
+          ...d,
+          places: (d.places || []).filter((p: any) => p.id !== tripPlaceId),
+        }));
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to delete place", e);
+    }
+  };
+
   function SortablePlaceCard({
     place,
     index,
@@ -168,49 +190,81 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       cursor: "grab",
     };
 
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+    const thumbnailUrl: string | undefined =
+      place.placeDetails?.photoReference && apiKey
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=160&photo_reference=${encodeURIComponent(
+            place.placeDetails.photoReference
+          )}&key=${apiKey}`
+        : place.placeDetails?.destinationImageUrl || undefined;
+
+    const description: string | undefined =
+      place.placeDetails?.secondaryText ||
+      place.placeDetails?.formattedAddress ||
+      place.userNotes ||
+      (Array.isArray(place.placeDetails?.placeTypes)
+        ? place.placeDetails.placeTypes.slice(0, 3).join(", ")
+        : undefined);
+
     return (
       <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-        <button
-          type="button"
-          onClick={onClick}
-          className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-          aria-label={`View ${place.placeDetails?.name || place.name}`}
-        >
-          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-          <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
+        <div className="group w-full p-3 rounded-lg border bg-background flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors relative">
+          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab flex-shrink-0" />
+          <div className="flex items-center justify-center w-5 h-5 bg-primary-600 text-white rounded-full font-medium text-[11px] flex-shrink-0">
             {index + 1}
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClick}
+              className="block text-left"
+              aria-label={`View ${place.placeDetails?.name || place.name}`}
+            >
               <h5 className="font-medium text-sm">
                 {place.placeDetails?.name || place.name || "Unknown Place"}
               </h5>
-              {place.scheduledTime && (
-                <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                  <Clock className="w-3 h-3" />
-                  <span>{place.scheduledTime}</span>
-                </div>
+              {description && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  {description}
+                </p>
               )}
-            </div>
-            {place.placeDetails?.formattedAddress && (
-              <p className="text-xs text-muted-foreground">
-                {place.placeDetails.formattedAddress}
-              </p>
-            )}
-            {place.placeDetails?.secondaryText && (
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {place.placeDetails.secondaryText}
-              </p>
-            )}
+            </button>
           </div>
-          {place.userRating && (
-            <div className="flex items-center space-x-1">
-              <Star className="w-3 h-3 text-yellow-500" />
-              <span className="text-xs">{place.userRating}</span>
-            </div>
+
+          {thumbnailUrl && (
+            <img
+              src={thumbnailUrl}
+              alt={place.placeDetails?.name || place.name || "Place"}
+              className="w-36 h-20 rounded-md object-cover flex-shrink-0"
+            />
           )}
-          <MapPin className="w-4 h-4 text-muted-foreground" />
-        </button>
+          <button
+            type="button"
+            className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 border rounded-full p-1 text-muted-foreground hover:text-destructive"
+            aria-label="Remove place"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeletePlace(place.id);
+            }}
+            title="Remove"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     );
   }
@@ -318,22 +372,15 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 
     setIsAddingPlace(true);
     try {
-      // First, upsert the place to ensure it exists in our database
-      await upsertPlaceFn({
-        data: {
-          place_id: place.place_id,
-          name: place.main_text,
-          formatted_address: place.description,
-          main_text: place.main_text,
-          secondary_text: place.secondary_text,
-          types: place.types,
-        },
-      });
-
-      // Then add it to the user's itinerary for this day
+      // Atomic upsert+add in a single call
       await createPlaceMutation.mutateAsync({
         tripItineraryId: day.id,
         placeId: place.place_id,
+        placeName: place.main_text,
+        formattedAddress: place.description,
+        mainText: place.main_text,
+        secondaryText: place.secondary_text,
+        placeTypes: place.types,
         userNotes: `Added from search: ${place.description}`,
       });
 
@@ -594,244 +641,244 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                   const showSuggestions = dayShowSuggestions[day.id] || false;
 
                   return (
-                    <Card key={day.id} className="bg-card/95 backdrop-blur-sm">
-                      <CardContent className="p-0">
-                        {/* Accordion Header */}
-                        <button
-                          className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
-                          onClick={() => toggleDayExpansion(day.id)}
-                          aria-expanded={isExpanded}
-                          aria-controls={`day-content-${day.id}`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="flex items-center justify-center w-8 h-8 bg-primary-500 text-white rounded-full font-semibold text-sm">
-                              {index + 1}
-                            </div>
-                            <div className="text-left">
-                              <h3 className="font-semibold">
-                                {format(new Date(day.date), "EEEE, MMMM d")}
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                {day.places?.length || 0} places planned
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            {day.places?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                {day.places.length}
-                              </Badge>
-                            )}
-                            {isExpanded ? (
-                              <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                            ) : (
-                              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Accordion Content */}
-                        {isExpanded && (
-                          <div
-                            id={`day-content-${day.id}`}
-                            className="border-t bg-background/50"
+                    <div
+                      ref={(el) => {
+                        dayCardRefs.current[day.id] = el;
+                      }}
+                    >
+                      <Card className="bg-card/95 backdrop-blur-sm">
+                        <CardContent className="p-0">
+                          {/* Accordion Header */}
+                          <button
+                            className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                            onClick={() => toggleDayExpansion(day.id)}
+                            aria-expanded={isExpanded}
+                            aria-controls={`day-content-${day.id}`}
                           >
-                            <div className="p-4 space-y-4">
-                              {/* Day Notes */}
-                              {day.notes && (
-                                <div className="flex items-start space-x-2 p-3 bg-muted/30 rounded-lg">
-                                  <StickyNote className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                  <p className="text-sm text-muted-foreground">
-                                    {day.notes}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Add Place Search */}
-                              <div className="space-y-3">
-                                <h4 className="font-medium text-sm flex items-center space-x-2">
-                                  <Plus className="w-4 h-4" />
-                                  <span>Add a place to this day</span>
-                                </h4>
-
-                                <div className="relative">
-                                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                                  <Input
-                                    type="text"
-                                    placeholder="Search for restaurants, attractions, etc..."
-                                    className="pl-10"
-                                    value={daySearchQuery}
-                                    onChange={(e) =>
-                                      handleDaySearchChange(
-                                        day.id,
-                                        e.target.value
-                                      )
-                                    }
-                                    onFocus={() =>
-                                      setDayShowSuggestions((prev) => ({
-                                        ...prev,
-                                        [day.id]: true,
-                                      }))
-                                    }
-                                    onBlur={() => {
-                                      setTimeout(
-                                        () =>
-                                          setDayShowSuggestions((prev) => ({
-                                            ...prev,
-                                            [day.id]: false,
-                                          })),
-                                        150
-                                      );
-                                    }}
-                                    aria-label={`Search places for ${format(new Date(day.date), "EEEE, MMMM d")}`}
-                                    ref={(el) => {
-                                      daySearchInputRefs.current[day.id] = el;
-                                    }}
-                                  />
-                                  {daySearchQuery && (
-                                    <Button
-                                      type="button"
-                                      size="icon"
-                                      variant="ghost"
-                                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                                      onClick={() => {
-                                        setDaySearchQueries((prev) => ({
-                                          ...prev,
-                                          [day.id]: "",
-                                        }));
-                                        setDayPlaceSuggestions((prev) => ({
-                                          ...prev,
-                                          [day.id]: [],
-                                        }));
-                                      }}
-                                      aria-label="Clear search"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </Button>
-                                  )}
-
-                                  {/* Search Results Dropdown */}
-                                  {showSuggestions && (
-                                    <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                      {isSearching ? (
-                                        <div className="px-4 py-3 text-center text-muted-foreground flex items-center justify-center space-x-2">
-                                          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                                          <span>Searching...</span>
-                                        </div>
-                                      ) : dayPlaces.length > 0 ? (
-                                        dayPlaces.map((place) => (
-                                          <button
-                                            key={place.place_id}
-                                            type="button"
-                                            className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center space-x-3"
-                                            onClick={() => {
-                                              handlePlaceSelectForDay(
-                                                day.id,
-                                                place
-                                              );
-                                              handleAddPlaceToDay(day, place);
-                                            }}
-                                          >
-                                            <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                                            <div className="flex-1">
-                                              <div className="font-medium text-sm">
-                                                {place.main_text}
-                                              </div>
-                                              <div className="text-xs text-muted-foreground">
-                                                {place.secondary_text}
-                                              </div>
-                                            </div>
-                                            <Plus className="w-4 h-4 text-primary" />
-                                          </button>
-                                        ))
-                                      ) : daySearchQuery.length >= 2 ? (
-                                        <div className="px-4 py-3 text-center text-muted-foreground">
-                                          No places found
-                                        </div>
-                                      ) : null}
-                                      <div className="px-4 py-2 border-t text-[10px] text-muted-foreground/70">
-                                        Powered by Google Places
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                            <div className="flex items-center space-x-3">
+                              <div className="flex items-center justify-center w-8 h-8 bg-primary-500 text-white rounded-full font-semibold text-sm">
+                                {index + 1}
                               </div>
-
-                              {/* Places for this day */}
-                              {day.places && day.places.length > 0 ? (
-                                <div className="space-y-2">
-                                  <h4 className="font-medium text-sm">
-                                    Planned Places
-                                  </h4>
-                                  <DndContext
-                                    sensors={sensors}
-                                    collisionDetection={closestCenter}
-                                    onDragEnd={(e) => handleDragEnd(day, e)}
-                                  >
-                                    <SortableContext
-                                      items={day.places.map((p: any) => p.id)}
-                                      strategy={verticalListSortingStrategy}
-                                    >
-                                      {day.places.map(
-                                        (place: any, placeIndex: number) => (
-                                          <SortablePlaceCard
-                                            key={place.id}
-                                            place={place}
-                                            index={placeIndex}
-                                            onClick={() =>
-                                              setSelectedPlace({
-                                                place_id: place.placeId,
-                                                main_text:
-                                                  place.placeDetails?.name ||
-                                                  place.name ||
-                                                  "",
-                                                description:
-                                                  place.placeDetails
-                                                    ?.formattedAddress || "",
-                                                secondary_text: "",
-                                                types: [],
-                                              })
-                                            }
-                                          />
-                                        )
-                                      )}
-                                    </SortableContext>
-                                  </DndContext>
-                                </div>
+                              <div className="text-left">
+                                <h3 className="font-semibold">
+                                  {format(new Date(day.date), "EEEE, MMMM d")}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                  {day.places?.length || 0} places planned
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              {day.places?.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {day.places.length}
+                                </Badge>
+                              )}
+                              {isExpanded ? (
+                                <ChevronDown className="w-5 h-5 text-muted-foreground" />
                               ) : (
-                                <div className="text-center py-4 text-muted-foreground">
-                                  <MapPin className="w-6 h-6 mx-auto mb-2" />
-                                  <p className="text-sm">
-                                    No places planned for this day
-                                  </p>
-                                  <p className="text-xs">
-                                    Use the search above to add places
-                                  </p>
-                                  <div className="mt-3">
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      onClick={() => {
-                                        setExpandedDays((prev) =>
-                                          new Set(prev).add(day.id)
-                                        );
-                                        daySearchInputRefs.current[
-                                          day.id
-                                        ]?.focus();
-                                      }}
-                                      aria-label="Add a place to this day"
+                                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Accordion Content */}
+                          {isExpanded && (
+                            <div
+                              id={`day-content-${day.id}`}
+                              className="border-t bg-background/50"
+                            >
+                              <div className="p-4 space-y-4">
+                                {/* Day Notes */}
+                                {day.notes && (
+                                  <div className="flex items-start space-x-2 p-3 bg-muted/30 rounded-lg">
+                                    <StickyNote className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                    <p className="text-sm text-muted-foreground">
+                                      {day.notes}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Places section comes first; add-place input moved below */}
+
+                                {/* Places for this day */}
+                                {day.places && day.places.length > 0 ? (
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">
+                                      Planned Places
+                                    </h4>
+                                    <DndContext
+                                      sensors={sensors}
+                                      collisionDetection={closestCenter}
+                                      onDragEnd={(e) => handleDragEnd(day, e)}
                                     >
-                                      <Plus className="w-4 h-4 mr-1" /> Add a
-                                      place
-                                    </Button>
+                                      <SortableContext
+                                        items={day.places.map((p: any) => p.id)}
+                                        strategy={verticalListSortingStrategy}
+                                      >
+                                        {day.places.map(
+                                          (place: any, placeIndex: number) => (
+                                            <SortablePlaceCard
+                                              key={place.id}
+                                              place={place}
+                                              index={placeIndex}
+                                              onClick={() =>
+                                                setSelectedPlace({
+                                                  place_id: place.placeId,
+                                                  main_text:
+                                                    place.placeDetails?.name ||
+                                                    place.name ||
+                                                    "",
+                                                  description:
+                                                    place.placeDetails
+                                                      ?.formattedAddress || "",
+                                                  secondary_text: "",
+                                                  types: [],
+                                                })
+                                              }
+                                            />
+                                          )
+                                        )}
+                                      </SortableContext>
+                                    </DndContext>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4 text-muted-foreground">
+                                    <MapPin className="w-6 h-6 mx-auto mb-2" />
+                                    <p className="text-sm">
+                                      No places planned for this day
+                                    </p>
+                                    <p className="text-xs">
+                                      Use the field below to add places
+                                    </p>
+                                    <div className="mt-3">
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => {
+                                          setExpandedDays((prev) =>
+                                            new Set(prev).add(day.id)
+                                          );
+                                          daySearchInputRefs.current[
+                                            day.id
+                                          ]?.focus();
+                                        }}
+                                        aria-label="Add a place to this day"
+                                      >
+                                        <Plus className="w-4 h-4 mr-1" /> Add a
+                                        place
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Minimal Add Place input below planned places */}
+                                <div className="pt-2">
+                                  <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                    <Input
+                                      type="text"
+                                      placeholder="Add place"
+                                      className="pl-9"
+                                      value={daySearchQuery}
+                                      onChange={(e) =>
+                                        handleDaySearchChange(
+                                          day.id,
+                                          e.target.value
+                                        )
+                                      }
+                                      onFocus={() =>
+                                        setDayShowSuggestions((prev) => ({
+                                          ...prev,
+                                          [day.id]: true,
+                                        }))
+                                      }
+                                      onBlur={() => {
+                                        setTimeout(
+                                          () =>
+                                            setDayShowSuggestions((prev) => ({
+                                              ...prev,
+                                              [day.id]: false,
+                                            })),
+                                          150
+                                        );
+                                      }}
+                                      aria-label={`Add place for ${format(new Date(day.date), "EEEE, MMMM d")}`}
+                                      ref={(el) => {
+                                        daySearchInputRefs.current[day.id] = el;
+                                      }}
+                                    />
+                                    {daySearchQuery && (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                                        onClick={() => {
+                                          setDaySearchQueries((prev) => ({
+                                            ...prev,
+                                            [day.id]: "",
+                                          }));
+                                          setDayPlaceSuggestions((prev) => ({
+                                            ...prev,
+                                            [day.id]: [],
+                                          }));
+                                        }}
+                                        aria-label="Clear search"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    )}
+
+                                    {/* Suggestions Dropdown */}
+                                    {showSuggestions && (
+                                      <div className="absolute top-full left-0 right-0 z-50 mt-2 bg-background border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {isSearching ? (
+                                          <div className="px-4 py-3 text-center text-muted-foreground flex items-center justify-center space-x-2">
+                                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                                            <span>Searching...</span>
+                                          </div>
+                                        ) : dayPlaces.length > 0 ? (
+                                          dayPlaces.map((place) => (
+                                            <button
+                                              key={place.place_id}
+                                              type="button"
+                                              className="w-full px-4 py-3 text-left hover:bg-muted transition-colors flex items-center space-x-3"
+                                              onClick={() => {
+                                                handlePlaceSelectForDay(
+                                                  day.id,
+                                                  place
+                                                );
+                                                handleAddPlaceToDay(day, place);
+                                              }}
+                                            >
+                                              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                              <div className="flex-1">
+                                                <div className="font-medium text-sm">
+                                                  {place.main_text}
+                                                </div>
+                                                <div className="text-xs text-muted-foreground">
+                                                  {place.secondary_text}
+                                                </div>
+                                              </div>
+                                              <Plus className="w-4 h-4 text-primary" />
+                                            </button>
+                                          ))
+                                        ) : daySearchQuery.length >= 2 ? (
+                                          <div className="px-4 py-3 text-center text-muted-foreground">
+                                            No places found
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
                   );
                 })
               )}
@@ -860,6 +907,37 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                   itineraryPlaces={itinerary.flatMap(
                     (day: any) => day.places || []
                   )}
+                  itineraryDays={itinerary.map((d: any) => ({
+                    id: d.id,
+                    date: d.date,
+                  }))}
+                  onAddPlaceToDay={async (dayId, marker) => {
+                    // Reuse createPlace mutation with atomic upsert
+                    try {
+                      await createPlaceMutation.mutateAsync({
+                        tripItineraryId: dayId,
+                        placeId: marker.placeId,
+                        placeName: marker.name,
+                        formattedAddress: marker.details?.description || "",
+                        mainText: marker.name,
+                        secondaryText: marker.details?.description,
+                        placeTypes: marker.details?.types || [],
+                      });
+                      // Expand day and scroll into view
+                      setExpandedDays((prev) => new Set(prev).add(dayId));
+                      const el = dayCardRefs.current[dayId];
+                      if (el) {
+                        el.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                      toast.success("Place added to your itinerary");
+                    } catch (e) {
+                      console.error("Failed to add place from map", e);
+                      toast.error("Failed to add place");
+                    }
+                  }}
                   onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
