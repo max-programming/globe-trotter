@@ -82,8 +82,13 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
       where: and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)),
       with: {
         itinerary: {
+          orderBy: [asc(tripItinerary.date)],
           with: {
             places: {
+              orderBy: [
+                asc(tripPlaces.sortOrder),
+                asc(tripPlaces.scheduledTime),
+              ],
               with: {
                 place: true,
               },
@@ -91,11 +96,6 @@ export const getTripWithItinerary = createServerFn({ method: "GET" })
           },
         },
       },
-      orderBy: [
-        asc(tripItinerary.date),
-        asc(tripPlaces.sortOrder),
-        asc(tripPlaces.scheduledTime),
-      ],
     });
 
     if (!trip) {
