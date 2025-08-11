@@ -8,6 +8,9 @@ import { getCurrentUserQuery } from "~/lib/queries/profile";
 
 export const Route = createFileRoute("/(protected)/profile")({
   component: ProfilePage,
+  head: () => ({
+    meta: [{ title: "Profile | Globe Trotter" }],
+  }),
   loader: ({ context }) => {
     context.queryClient.ensureQueryData(getCurrentUserQuery);
   },
