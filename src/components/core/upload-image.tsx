@@ -33,7 +33,7 @@ interface PexelsPhoto {
   photographer?: string;
 }
 
-interface ImageSelectionData {
+export interface ImageSelectionData {
   url: string;
   source: "upload" | "pexels";
   data?: PexelsPhoto;
@@ -58,7 +58,7 @@ const UploadImage = ({
   const handleFileUpload = useCallback((file: File) => {
     if (file && file.type.startsWith("image/")) {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = e => {
         const imageUrl = e.target?.result as string;
         setUploadedImage(imageUrl);
       };
@@ -187,7 +187,7 @@ const UploadImage = ({
                       variant="outline"
                       size="sm"
                       className="absolute top-2 right-2"
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         setUploadedImage(null);
                       }}
@@ -197,7 +197,7 @@ const UploadImage = ({
                   </div>
                   <div className="space-y-2">
                     <Button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         const uploadImage = {
                           url: uploadedImage,
@@ -240,7 +240,7 @@ const UploadImage = ({
               <Input
                 placeholder="Search for images..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pr-10"
               />
               <SearchIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
