@@ -1,15 +1,6 @@
-# globe-trotter
+# Globe Trotter
 
-To install dependencies:
+Odoo Hackathon 2025 Submission
 
-```bash
-bun install
-```
-
-To run:
-
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.2.4. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Submission Video: https://drive.google.com/file/d/1NanUohTdMoxGv8DtWxGShGWDQ64mZFQU/view?usp=sharing
+[Unable to record audio because of no good microphone]
