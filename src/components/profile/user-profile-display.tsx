@@ -80,8 +80,8 @@ export function UserProfileDisplay() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Compact Profile Card */}
         <div className="lg:col-span-1">
-          <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm h-fit">
-            <CardContent className="p-4">
+          <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm h-fit p-5">
+            <CardContent>
               {/* Profile Picture and Basic Info */}
               <div className="text-center space-y-3">
                 <div className="relative inline-block">
@@ -133,7 +133,26 @@ export function UserProfileDisplay() {
         {/* Right Column - Key Details in Horizontal Layout */}
         <div className="lg:col-span-3">
           {/* Quick Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Number of trips */}
+            <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Number of trips
+                    </p>
+                    <p className="text-sm font-medium">
+                      {currentUser.trips.length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Contact Info */}
             <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
               <CardContent className="p-4">
@@ -202,29 +221,6 @@ export function UserProfileDisplay() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Travel Stats - Horizontal */}
-          <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm">
-            <CardHeader className="pb-0">
-              <CardTitle className="flex items-center space-x-2 text-lg justify-center">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <Globe className="w-4 h-4 text-white" />
-                </div>
-                <span>Travel Overview</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div>
-                <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">
-                    {currentUser.trips.length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Trips</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* About Section - If exists */}
           {currentUser.additionalInfo && (
             <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm mt-4">
