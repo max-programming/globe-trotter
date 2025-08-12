@@ -39,7 +39,6 @@ import {
   ChevronDownIcon,
   Eye,
   EyeOff,
-  ImageIcon,
 } from "lucide-react";
 import { Heading } from "~/components/generic/heading";
 import { getPexelsImageQuery } from "~/lib/queries/pexels";
@@ -50,8 +49,6 @@ import {
 } from "~/components/trips/trip-schema";
 import { getLatLng } from "~/server-functions/get-lat-lng";
 import { useServerFn } from "@tanstack/react-start";
-import UploadImage from "~/components/core/upload-image";
-import type { ImageSelectionData } from "~/components/core/upload-image";
 
 export const Route = createFileRoute("/(protected)/trips/new")({
   head: () => ({ meta: [{ title: "Create Trip | Globe Trotter" }] }),
@@ -90,9 +87,6 @@ const NewTripForm = () => {
     from: new Date(),
     to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
   });
-  const [customImage, setCustomImage] = useState<ImageSelectionData | null>(
-    null
-  );
 
   // Use React Query for Pexels image search
   const { data: imageResult, isLoading: isLoadingImage } = useQuery(
@@ -243,24 +237,13 @@ const NewTripForm = () => {
     setDateRange(range);
   };
 
-  const handleImageSelect = (image: ImageSelectionData) => {
-    setCustomImage(image);
-  };
-
   const handleSubmit = (data: CreateTripFormData) => {
     console.log("🚀 Creating trip:", data);
 
-    // Prioritize custom selected image over automatic Pexels image
-    let imageUrl: string | undefined;
-    if (customImage) {
-      imageUrl = customImage.url;
-    } else if (imageResult?.success) {
-      imageUrl = imageResult.imageUrl;
-    }
-
+    // Add the Pexels image URL if available
     const tripData: CreateTripFormData = {
       ...data,
-      imageUrl,
+      imageUrl: imageResult?.success ? imageResult.imageUrl : undefined,
     };
 
     console.log("📍 Trip data with image:", tripData);
@@ -464,72 +447,6 @@ const NewTripForm = () => {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              {/* Custom Image Selection */}
-              <div className="space-y-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                    <ImageIcon className="w-4 h-4 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Custom destination image
-                  </h3>
-                </div>
-
-                <div className="space-y-4">
-                  <p className="text-muted-foreground">
-                    Choose a custom image for your trip destination, or we'll
-                    automatically find one for you.
-                  </p>
-
-                  <div className="flex items-start space-x-4">
-                    <UploadImage
-                      btnText="Choose Custom Image"
-                      onImageSelect={handleImageSelect}
-                      className="w-auto"
-                    />
-
-                    {customImage && (
-                      <div className="flex-1 space-y-2">
-                        <p className="text-sm font-medium text-foreground">
-                          Selected image:
-                        </p>
-                        <div className="relative inline-block">
-                          <img
-                            src={customImage.url}
-                            alt="Selected custom image"
-                            className="w-24 h-24 object-cover rounded-lg border-2 border-primary/20"
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                            onClick={() => setCustomImage(null)}
-                          >
-                            <span className="text-xs">×</span>
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Source:{" "}
-                          {customImage.source === "upload"
-                            ? "Uploaded file"
-                            : "Web image"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {!customImage && imageResult?.success && (
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm text-muted-foreground">
-                        💡 We found an automatic image for your destination. You
-                        can override it with a custom selection above.
-                      </p>
-                    </div>
-                  )}
-                </div>
               </div>
 
               {/* Error Display */}
