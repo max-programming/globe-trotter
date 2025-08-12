@@ -249,7 +249,7 @@ export function RecommendationDetailPage({
                     <span className="text-sm font-medium">
                       ~
                       {formatCurrency(recommendation.suggestedBudget, {
-                        currency: auth.currencySign || "USD",
+                        currency: auth?.currencySign || "USD",
                       })}
                     </span>
                   </div>
@@ -428,7 +428,7 @@ export function RecommendationDetailPage({
                               ` • ${Math.round(totalDuration / 60)}h`}
                             {totalCost > 0 &&
                               ` • ${formatCurrency(totalCost, {
-                                currency: auth.currencySign || "USD",
+                                currency: auth?.currencySign || "USD",
                               })}`}
                           </p>
                         </div>
@@ -488,7 +488,7 @@ export function RecommendationDetailPage({
                                     <div className="flex items-center gap-1">
                                       <DollarSign className="w-3 h-3" />
                                       {formatCurrency(activity.estimatedCost, {
-                                        currency: auth.currencySign || "USD",
+                                        currency: auth?.currencySign || "USD",
                                       })}
                                     </div>
                                   )}

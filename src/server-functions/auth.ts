@@ -10,18 +10,16 @@ export const getSession = createServerFn({ method: "GET" }).handler(
   async () => {
     const { headers } = getWebRequest();
     const session = await auth.api.getSession({ headers });
-    let currencySign: string | null = null;
-    if (session) {
-      const currency = await db
-        .select({
-          currency: countries.currency,
-        })
-        .from(users)
-        .where(eq(users.id, session.user.id))
-        .leftJoin(countries, eq(users.countryId, countries.id));
+    if (!session) return null;
+    const currency = await db
+      .select({
+        currency: countries.currency,
+      })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .leftJoin(countries, eq(users.countryId, countries.id));
 
-      currencySign = currency[0].currency;
-    }
+    const currencySign = currency[0].currency;
     return { ...session, currencySign };
   }
 );
