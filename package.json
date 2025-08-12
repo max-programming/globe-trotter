@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bunx --bun vite dev",
     "build": "bunx --bun vite build",
+    "start": "bun run .output/server/index.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "bun run src/lib/db/seed.ts",

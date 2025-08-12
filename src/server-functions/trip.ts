@@ -124,11 +124,11 @@ export const reorderTripPlaces = createServerFn({ method: "POST" })
       throw new Error("Itinerary not found or access denied");
     }
 
-    const ids = data.orders.map((o) => o.tripPlaceId);
+    const ids = data.orders.map(o => o.tripPlaceId);
 
     // Build CASE expression using query builder
     const caseExpr = sql`CASE ${tripPlaces.id} ${sql.join(
-      data.orders.map((o) => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
+      data.orders.map(o => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
       sql` `
     )} ELSE ${tripPlaces.sortOrder} END`;
 

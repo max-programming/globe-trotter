@@ -41,7 +41,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
   );
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays((prev) => {
+    setExpandedDays(prev => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
@@ -360,16 +360,12 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
-                  center={
-                    trip.place
-                      ? {
-                          lat: trip.place.latitude || 0,
-                          lng: trip.place.longitude || 0,
-                        }
-                      : undefined
-                  }
-                  onPlaceSelect={(place) => {
+                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  center={{
+                    lat: trip.place?.latitude || 0,
+                    lng: trip.place?.longitude || 0,
+                  }}
+                  onPlaceSelect={place => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
                   }}
