@@ -57,6 +57,8 @@ export const createTrip = createServerFn({ method: "POST" })
       })
       .returning();
 
+    console.log({ sd: data.startDate, ed: data.endDate });
+
     // Generate daily itinerary entries if dates are provided
     if (data.startDate && data.endDate) {
       const startDate = new Date(data.startDate);
