@@ -194,7 +194,7 @@ export function CommunityTripListSkeleton() {
       {/* Skeleton for full-width cards */}
       <div className="space-y-6">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="w-full overflow-hidden">
+          <Card key={i} className="w-full overflow-hidden p-4">
             <CardContent className="p-0">
               <div className="flex flex-col md:flex-row">
                 {/* Image skeleton */}

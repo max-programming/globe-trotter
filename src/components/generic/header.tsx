@@ -29,7 +29,7 @@ export const Header = () => {
 
   return (
     <>
-      <div className="flex items-center justify-between p-4 h-20 bg-transparent">
+      <div className="flex items-center justify-between p-4 h-20 bg-primary/20 border-b border-primary">
         <div className="flex items-center gap-8">
           <div className="h-10 w-auto">
             <Link to="/">
@@ -40,7 +40,7 @@ export const Header = () => {
               />
             </Link>
           </div>
-          
+
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link
@@ -109,7 +109,7 @@ export const Header = () => {
 
             <DropdownMenuItem
               variant="destructive"
-              onClick={e => {
+              onClick={(e) => {
                 e.preventDefault();
                 signOut();
               }}

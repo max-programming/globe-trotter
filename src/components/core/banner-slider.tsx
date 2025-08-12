@@ -29,7 +29,7 @@ const bannerImages = [
 
 function BannerSlider() {
   return (
-    <div className="relative w-full -mt-20 -z-10">
+    <div className="relative w-full">
       <Carousel
         className="w-full"
         opts={{

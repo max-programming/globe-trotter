@@ -618,6 +618,38 @@ export const getTripWithItineraryByShareId = createServerFn({ method: "GET" })
     };
   });
 
+export const updateTripImage = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      tripId: z.string(),
+      imageUrl: z.string().url(),
+    })
+  )
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    // Verify ownership
+    const trip = await db
+      .select()
+      .from(trips)
+      .where(and(eq(trips.id, data.tripId), eq(trips.userId, context.user.id)))
+      .limit(1);
+
+    if (!trip.length) {
+      throw new Error("Trip not found or access denied");
+    }
+
+    const [updatedTrip] = await db
+      .update(trips)
+      .set({
+        destinationImageUrl: data.imageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(trips.id, data.tripId))
+      .returning();
+
+    return updatedTrip;
+  });
+
 export const createTripShare = createServerFn({ method: "POST" })
   .validator(z.object({ tripId: z.string() }))
   .middleware([authMiddleware])
