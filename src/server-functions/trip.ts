@@ -650,5 +650,13 @@ export const createTripShare = createServerFn({ method: "POST" })
       updatedAt: new Date(),
     });
 
+    await db
+      .update(trips)
+      .set({
+        isPublic: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(trips.id, data.tripId));
+
     return { shareId };
   });
