@@ -99,7 +99,7 @@ export function CommunityTripCard({
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row">
           {/* Trip Image */}
-          <div className="relative w-full md:w-80 h-48 md:h-auto bg-gradient-to-br from-primary-100 to-primary-200 flex-shrink-0 rounded-lg overflow-hidden">
+          <div className="relative w-full md:w-80 h-48 md:h-auto bg-gradient-to-br from-primary-100 to-primary-200 flex-shrink-0 rounded-lg border border-primary overflow-hidden">
             {displayImage ? (
               <img
                 src={displayImage}
