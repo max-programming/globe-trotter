@@ -222,6 +222,13 @@ export const createPlace = createServerFn({ method: "POST" })
       scheduledTime: z.string().optional(), // HH:MM format
       userNotes: z.string().optional(),
       visitDuration: z.number().optional(), // in minutes
+      // Optional place details to allow atomic upsert-and-add in one call
+      placeName: z.string().optional(),
+      formattedAddress: z.string().optional(),
+      mainText: z.string().optional(),
+      secondaryText: z.string().optional(),
+      placeTypes: z.array(z.string()).optional(),
+      photoUrl: z.string().optional(),
     })
   )
   .middleware([authMiddleware])
@@ -241,7 +248,8 @@ export const createPlace = createServerFn({ method: "POST" })
       throw new Error("Itinerary not found or access denied");
     }
 
-    // Ensure the place exists in the places table (it should from the search/autocomplete)
+    // Ensure the place exists in the places table; if not, upsert with provided details.
+    // If details are insufficient, fetch Place Details from Google to enrich record.
     const existingPlace = await db
       .select()
       .from(places)
@@ -249,7 +257,80 @@ export const createPlace = createServerFn({ method: "POST" })
       .limit(1);
 
     if (!existingPlace.length) {
-      throw new Error("Place not found. Please search for the place first.");
+      let enriched: {
+        name?: string;
+        formattedAddress?: string;
+        mainText?: string;
+        secondaryText?: string | null;
+        placeTypes?: string[];
+        latitude?: number | null;
+        longitude?: number | null;
+        photoReference?: string | null;
+      } = {
+        name: data.placeName,
+        formattedAddress: data.formattedAddress,
+        mainText: data.mainText,
+        secondaryText: data.secondaryText ?? null,
+        placeTypes: data.placeTypes ?? [],
+        latitude: null,
+        longitude: null,
+        photoReference: null,
+      };
+
+      try {
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+          const fields = [
+            "place_id",
+            "name",
+            "formatted_address",
+            "types",
+            "geometry/location",
+            "photos",
+            "editorial_summary",
+          ].join(",");
+          const url = new URL(
+            "https://maps.googleapis.com/maps/api/place/details/json"
+          );
+          url.searchParams.set("place_id", data.placeId);
+          url.searchParams.set("fields", fields);
+          url.searchParams.set("key", apiKey);
+          const resp = await fetch(url.toString());
+          const json: any = await resp.json();
+          if (json?.status === "OK" && json.result) {
+            const r = json.result;
+            enriched = {
+              name: r.name ?? enriched.name,
+              formattedAddress:
+                r.formatted_address ?? enriched.formattedAddress,
+              mainText: r.name ?? enriched.mainText,
+              secondaryText:
+                r.editorial_summary?.overview ?? enriched.secondaryText,
+              placeTypes: r.types ?? enriched.placeTypes,
+              latitude: r.geometry?.location?.lat ?? null,
+              longitude: r.geometry?.location?.lng ?? null,
+              photoReference: r.photos?.[0]?.photo_reference ?? null,
+            };
+          }
+        }
+      } catch (_e) {
+        // Best effort enrichment; ignore errors and fall back to provided fields
+      }
+
+      await db.insert(places).values({
+        placeId: data.placeId,
+        name: enriched.name ?? data.placeName ?? "Unknown",
+        formattedAddress:
+          enriched.formattedAddress ?? data.formattedAddress ?? "",
+        mainText: enriched.mainText ?? data.mainText ?? data.placeName ?? "",
+        secondaryText: enriched.secondaryText ?? null,
+        placeTypes: enriched.placeTypes ?? [],
+        latitude: enriched.latitude ?? null,
+        longitude: enriched.longitude ?? null,
+        photoReference: enriched.photoReference ?? data.photoUrl ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
     }
 
     // Determine next sort order for the day using unit 100 increments
