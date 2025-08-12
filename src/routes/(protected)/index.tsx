@@ -1,27 +1,20 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import BannerSlider from "~/components/core/banner-slider";
-import Search from "~/components/core/search";
 import { Heading } from "~/components/generic/heading";
-import SelectDropdown from "~/components/generic/select-dropdown";
 import {
   RecommendationsSection,
   RecommendationsSectionSkeleton,
 } from "~/components/recommendations/RecommendationsSection";
 import { getRecommendationsQuery } from "~/lib/queries/recommendations";
 import { getCurrentUserQuery } from "~/lib/queries/profile";
+import { getUserTripsQuery } from "~/lib/queries/trips";
 import { Button } from "~/components/ui/button";
-import { tripStatuses } from "~/lib/db/schema/constants";
-import { Suspense } from "react";
-
-const sortOptions = [
-  { value: "date", label: "Date" },
-  { value: "name", label: "Name" },
-];
-const filterOptions = tripStatuses.map((status) => ({
-  value: status,
-  label: status,
-}));
+import { Suspense, useState } from "react";
+import {
+  FilterableUserTripsDisplay,
+  FilterableUserTripsSkeleton,
+} from "~/components/trips/FilterableUserTripsDisplay";
 
 export const Route = createFileRoute("/(protected)/")({
   component: HomePage,
@@ -29,8 +22,9 @@ export const Route = createFileRoute("/(protected)/")({
     meta: [{ title: "Home | Globe Trotter" }],
   }),
   loader: ({ context }) => {
-    // Prefetch user and recommendations data
+    // Prefetch user, trips, and recommendations data
     context.queryClient.prefetchQuery(getCurrentUserQuery);
+    context.queryClient.prefetchQuery(getUserTripsQuery);
     context.queryClient.prefetchQuery(getRecommendationsQuery());
   },
   beforeLoad: ({ context }) => {
@@ -41,27 +35,38 @@ export const Route = createFileRoute("/(protected)/")({
 });
 
 function HomePage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+
   return (
     <div className="space-y-10">
       <BannerSlider />
       <div className="container px-4 mx-auto">
         <div className="space-y-10">
+          {/* User Trips Section */}
           <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <Search className="w-full" />
-              <div className="flex items-center gap-4">
-                <SelectDropdown options={filterOptions} placeholder="filter" />
-                <SelectDropdown options={sortOptions} placeholder="sort by" />
-              </div>
-            </div>
-            <Heading>Discover Amazing Destinations</Heading>
+            <Suspense fallback={<FilterableUserTripsSkeleton />}>
+              <FilterableUserTripsDisplay
+                searchQuery={searchQuery}
+                filterStatus={filterStatus}
+                sortBy={sortBy}
+                onSearchChange={setSearchQuery}
+                onFilterChange={setFilterStatus}
+                onSortChange={setSortBy}
+                showControls={true}
+              />
+            </Suspense>
           </div>
 
-          {/* AI-Generated Recommendations Section */}
-          <div className="mb-5">
-            <Suspense fallback={<RecommendationsSectionSkeleton />}>
-              <RecommendationsSection maxItems={3} />
-            </Suspense>
+          {/* Recommendations Section */}
+          <div className="space-y-6">
+            <Heading>Discover Amazing Destinations</Heading>
+            <div className="mb-5">
+              <Suspense fallback={<RecommendationsSectionSkeleton />}>
+                <RecommendationsSection maxItems={3} />
+              </Suspense>
+            </div>
           </div>
         </div>
       </div>

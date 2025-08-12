@@ -29,11 +29,13 @@ export const Header = () => {
       <div className="flex items-center justify-between p-4 h-20 bg-transparent">
         <div className="flex items-center gap-2">
           <div className="h-10 w-auto">
-            <img
-              src="/images/logo.png"
-              alt="logo"
-              className="max-h-10 w-auto object-contain"
-            />
+            <Link to="/">
+              <img
+                src="/images/logo.png"
+                alt="logo"
+                className="max-h-10 w-auto object-contain"
+              />
+            </Link>
           </div>
         </div>
         <DropdownMenu>
@@ -50,7 +52,7 @@ export const Header = () => {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end">
             {/* user details */}
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
@@ -80,7 +82,7 @@ export const Header = () => {
 
             <DropdownMenuItem
               variant="destructive"
-              onClick={(e) => {
+              onClick={e => {
                 e.preventDefault();
                 signOut();
               }}
