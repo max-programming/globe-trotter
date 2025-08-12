@@ -127,7 +127,7 @@ export function TripTimelineModal({
               <Button
                 onClick={() => onSaveTrip(trip.id)}
                 disabled={isSaving}
-                className="flex-shrink-0"
+                className="flex-shrink-0 mr-6"
                 size="sm"
               >
                 {isSaving ? "Saving..." : "Save Trip"}

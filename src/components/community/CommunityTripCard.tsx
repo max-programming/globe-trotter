@@ -9,7 +9,6 @@ import {
   Star,
   Clock,
   Route,
-  DollarSign,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -96,11 +95,11 @@ export function CommunityTripCard({
     trip.itinerary?.reduce((acc, day) => acc + day.places.length, 0) || 0;
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden w-full">
+    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden w-full p-4">
       <CardContent className="p-0">
         <div className="flex flex-col md:flex-row">
           {/* Trip Image */}
-          <div className="relative w-full md:w-80 h-48 md:h-auto bg-gradient-to-br from-primary-100 to-primary-200 flex-shrink-0">
+          <div className="relative w-full md:w-80 h-48 md:h-auto bg-gradient-to-br from-primary-100 to-primary-200 flex-shrink-0 rounded-lg overflow-hidden">
             {displayImage ? (
               <img
                 src={displayImage}
@@ -153,7 +152,6 @@ export function CommunityTripCard({
 
                     {trip.totalBudget && (
                       <div className="flex items-center space-x-2">
-                        <DollarSign className="w-4 h-4" />
                         <span>${trip.totalBudget}</span>
                       </div>
                     )}
