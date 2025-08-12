@@ -3,6 +3,7 @@ import { AuthLayout } from "~/components/auth";
 
 export const Route = createFileRoute("/(auth)")({
   beforeLoad: ({ context }) => {
+    console.log({ context });
     if (!!context.auth) {
       throw redirect({ to: "/" });
     }

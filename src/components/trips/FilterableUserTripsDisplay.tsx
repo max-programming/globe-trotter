@@ -35,8 +35,6 @@ import { tripStatuses } from "~/lib/db/schema/constants";
 const sortOptions = [
   { value: "date", label: "Date" },
   { value: "name", label: "Name" },
-  { value: "budget", label: "Budget" },
-  { value: "status", label: "Status" },
 ];
 
 const filterOptions = [
