@@ -1,0 +1,502 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Badge } from "~/components/ui/badge";
+import { Skeleton } from "~/components/ui/skeleton";
+import {
+  MapPin,
+  Calendar,
+  DollarSign,
+  Plus,
+  Plane,
+  Ellipsis,
+  Share2,
+  Trash,
+  Loader2,
+  Search as SearchIcon,
+} from "lucide-react";
+import { getUserTripsQuery } from "~/lib/queries/trips";
+import { Link } from "@tanstack/react-router";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
+import { ShareTripDialog } from "./ShareTripDialog";
+import { useDeleteTrip } from "~/lib/mutations/trips/useDeleteTrip";
+import { ConfirmationDialog } from "../ui/confirmation-dialog";
+import { Input } from "../ui/input";
+import { SelectDropdown } from "../generic";
+import { tripStatuses } from "~/lib/db/schema/constants";
+
+const sortOptions = [
+  { value: "date", label: "Date" },
+  { value: "name", label: "Name" },
+  { value: "budget", label: "Budget" },
+  { value: "status", label: "Status" },
+];
+
+const filterOptions = [
+  { value: "all", label: "All Trips" },
+  ...tripStatuses.map(status => ({
+    value: status,
+    label: status.charAt(0).toUpperCase() + status.slice(1),
+  })),
+];
+
+interface FilterableUserTripsDisplayProps {
+  searchQuery?: string;
+  filterStatus?: string;
+  sortBy?: string;
+  onSearchChange?: (value: string) => void;
+  onFilterChange?: (value: string) => void;
+  onSortChange?: (value: string) => void;
+  showControls?: boolean;
+}
+
+export function FilterableUserTripsDisplay({
+  searchQuery = "",
+  filterStatus = "all",
+  sortBy = "date",
+  onSearchChange,
+  onFilterChange,
+  onSortChange,
+  showControls = true,
+}: FilterableUserTripsDisplayProps) {
+  const { data: trips } = useSuspenseQuery(getUserTripsQuery);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [tripToDelete, setTripToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const shareTrip = useShareTrip();
+  const deleteTrip = useDeleteTrip();
+
+  // Filter and sort trips
+  const filteredAndSortedTrips = useMemo(() => {
+    if (!trips) return [];
+
+    let filteredTrips = trips;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filteredTrips = filteredTrips.filter(
+        trip =>
+          trip.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (trip.description &&
+            trip.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    // Apply status filter
+    if (filterStatus && filterStatus !== "all") {
+      filteredTrips = filteredTrips.filter(
+        trip => trip.status === filterStatus
+      );
+    }
+
+    // Apply sorting
+    filteredTrips = [...filteredTrips].sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "budget":
+          return (b.totalBudget || 0) - (a.totalBudget || 0);
+        case "status":
+          return a.status.localeCompare(b.status);
+        case "date":
+        default:
+          // Sort by start date, then by created date
+          const aDate = new Date(a.startDate || a.createdAt);
+          const bDate = new Date(b.startDate || b.createdAt);
+          return bDate.getTime() - aDate.getTime();
+      }
+    });
+
+    return filteredTrips;
+  }, [trips, searchQuery, filterStatus, sortBy]);
+
+  const handleDeleteClick = (trip: any) => {
+    setTripToDelete({ id: trip.id, name: trip.name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tripToDelete) return;
+    await deleteTrip.mutateAsync({ tripId: tripToDelete.id });
+  };
+
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatCurrency = (amount: number | null) => {
+    if (!amount) return null;
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "draft":
+        return "bg-gray-100 text-gray-700 hover:bg-gray-100";
+      case "planned":
+        return "bg-blue-100 text-blue-700 hover:bg-blue-100";
+      case "active":
+        return "bg-green-100 text-green-700 hover:bg-green-100";
+      case "completed":
+        return "bg-purple-100 text-purple-700 hover:bg-purple-100";
+      default:
+        return "bg-gray-100 text-gray-700 hover:bg-gray-100";
+    }
+  };
+
+  const handleShareTrip = async (tripId: string) => {
+    try {
+      setSelectedTripId(tripId);
+      const result = await shareTrip.mutateAsync({ tripId });
+      const shareUrl = `${window.location.origin}/view/${result.shareId}`;
+      setShareUrl(shareUrl);
+      setIsShareDialogOpen(true);
+    } catch (error) {
+      console.error("Failed to share trip:", error);
+    }
+  };
+
+  if (!trips || trips.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <Plane className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-xl font-bold">My Trips</h2>
+          </div>
+          <Button
+            size="sm"
+            className="bg-gradient-to-r from-primary-500 to-primary-600"
+            asChild
+          >
+            <Link to="/trips/new">
+              <Plus className="w-4 h-4" />
+              New Trip
+            </Link>
+          </Button>
+        </div>
+
+        {/* Empty State */}
+        <div className="text-center py-12 bg-muted/30 rounded-2xl border-2 border-dashed border-muted-foreground/20">
+          <Plane className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+            No trips yet
+          </h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+            Start planning your next adventure! Create your first trip to
+            explore the world.
+          </p>
+          <Button asChild>
+            <Link to="/trips/new">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Trip
+            </Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <Plane className="w-4 h-4 text-white" />
+          </div>
+          <h2 className="text-xl font-bold">My Trips</h2>
+          <Badge variant="secondary" className="ml-2">
+            {filteredAndSortedTrips.length}
+            {trips.length !== filteredAndSortedTrips.length &&
+              ` of ${trips.length}`}
+          </Badge>
+        </div>
+        <Button asChild size="sm">
+          <Link to="/trips/new">
+            <Plus className="w-4 h-4" />
+            New Trip
+          </Link>
+        </Button>
+      </div>
+
+      {/* Search, Filter, and Sort Controls */}
+      {showControls && (
+        <div className="flex items-center gap-4">
+          <div className="relative flex-1">
+            <Input
+              type="text"
+              placeholder="Search your trips..."
+              value={searchQuery}
+              onChange={e => onSearchChange?.(e.target.value)}
+              className="pl-10"
+            />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          </div>
+          <SelectDropdown
+            options={filterOptions}
+            placeholder="Filter"
+            value={filterStatus}
+            onValueChange={onFilterChange}
+          />
+          <SelectDropdown
+            options={sortOptions}
+            placeholder="Sort by"
+            value={sortBy}
+            onValueChange={onSortChange}
+          />
+        </div>
+      )}
+
+      {/* Results info */}
+      {searchQuery.trim() && (
+        <div className="text-sm text-muted-foreground">
+          {filteredAndSortedTrips.length === 0
+            ? `No trips found matching "${searchQuery}"`
+            : `Found ${filteredAndSortedTrips.length} trip${filteredAndSortedTrips.length === 1 ? "" : "s"} matching "${searchQuery}"`}
+        </div>
+      )}
+
+      {/* Trips Grid */}
+      <div className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredAndSortedTrips.map(trip => (
+          <Card
+            key={trip.id}
+            className="group shadow-lg border-0 h-full bg-card/95 backdrop-blur-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col py-0 relative"
+          >
+            {/* Cover Image */}
+            {trip.destinationImageUrl && (
+              <div className="aspect-video w-full bg-gradient-to-br from-primary-100 to-primary-200 rounded-t-xl overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                <img
+                  src={
+                    trip.destinationImageUrl
+                      ? trip.destinationImageUrl
+                      : `https://api.dicebear.com/9.x/glass/svg?seed=${trip.name}`
+                  }
+                  alt={trip.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {/* Fixed Dropdown Menu - positioned over the image but outside scaling container */}
+            <div className="absolute top-2 right-2 z-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="p-0 size-11 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-colors"
+                  >
+                    <Ellipsis className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={() => handleShareTrip(trip.id)}
+                    disabled={shareTrip.isPending && selectedTripId === trip.id}
+                  >
+                    {shareTrip.isPending && selectedTripId === trip.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Share2 className="h-4 w-4" />
+                    )}
+                    Share Trip
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => handleDeleteClick(trip)}
+                  >
+                    <Trash className="h-4 w-4" />
+                    Delete Trip
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <CardTitle className="text-lg font-bold line-clamp-2 flex-1">
+                  {trip.name}
+                </CardTitle>
+                <div className="flex items-center space-x-2 ml-2">
+                  <Badge
+                    variant="secondary"
+                    className={getStatusColor(trip.status)}
+                  >
+                    {trip.status}
+                  </Badge>
+                </div>
+              </div>
+
+              {trip.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                  {trip.description}
+                </p>
+              )}
+            </CardHeader>
+
+            <CardContent className="space-y-3 flex flex-col flex-1 pb-4">
+              {/* Dates */}
+              {(trip.startDate || trip.endDate) && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {formatDate(trip.startDate)}
+                    {trip.startDate && trip.endDate && " - "}
+                    {formatDate(trip.endDate)}
+                  </span>
+                </div>
+              )}
+
+              {/* Budget */}
+              {trip.totalBudget && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <DollarSign className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Budget: {formatCurrency(trip.totalBudget)}
+                  </span>
+                </div>
+              )}
+
+              {/* Trip Stops */}
+              {trip.tripStopsCount > 0 && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    {trip.tripStopsCount} stop
+                    {trip.tripStopsCount !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="pt-2 mt-auto">
+                <Button
+                  asChild
+                  className="w-full cursor-pointer"
+                  variant="outline"
+                >
+                  <Link to={`/trips/$tripId`} params={{ tripId: trip.id }}>
+                    View Trip
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Share Dialog */}
+      <ShareTripDialog
+        isOpen={isShareDialogOpen}
+        onOpenChange={setIsShareDialogOpen}
+        shareUrl={shareUrl}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete Trip"
+        description={
+          <span>
+            Are you sure you want to delete{" "}
+            <strong>"{tripToDelete?.name}"</strong>? This action cannot be
+            undone and will permanently remove your trip and all its details.
+          </span>
+        }
+        confirmText="Delete Trip"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleteTrip.isPending}
+        onConfirm={handleConfirmDelete}
+      />
+    </div>
+  );
+}
+
+export function FilterableUserTripsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Header Skeleton */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Skeleton className="w-8 h-8 rounded-lg" />
+          <Skeleton className="h-6 w-24" />
+          <Skeleton className="h-5 w-8 rounded-full" />
+        </div>
+        <Skeleton className="h-8 w-28" />
+      </div>
+
+      {/* Search and Filters Skeleton */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 relative">
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <Skeleton className="h-10 w-20" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+
+      {/* Trips Grid Skeleton */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card
+            key={i}
+            className="shadow-lg border-0 bg-card/95 backdrop-blur-sm"
+          >
+            <div className="aspect-video w-full bg-muted rounded-t-xl">
+              <Skeleton className="w-full h-full rounded-t-xl" />
+            </div>
+
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+                <div className="flex items-center space-x-2 ml-2">
+                  <Skeleton className="h-5 w-16 rounded-full" />
+                  <Skeleton className="w-4 h-4" />
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-1/3" />
+              </div>
+              <Skeleton className="h-9 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}

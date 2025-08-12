@@ -24,16 +24,20 @@ interface SelectDropdownProps {
   options?: SelectOption[];
   placeholder?: string;
   className?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
 }
 
 function SelectDropdown({
   options,
   placeholder = "Select an option...",
   className,
+  value,
+  onValueChange,
 }: SelectDropdownProps) {
   return (
     <div className="space-y-2">
-      <Select>
+      <Select value={value} onValueChange={onValueChange}>
         <SelectTrigger className={cn("w-full capitalize", className)}>
           <SelectValue placeholder={placeholder} className="capitalize" />
         </SelectTrigger>
