@@ -61,19 +61,29 @@ export const createTrip = createServerFn({ method: "POST" })
 
     // Generate daily itinerary entries if dates are provided
     if (data.startDate && data.endDate) {
-      const startDate = new Date(data.startDate);
-      const endDate = new Date(data.endDate);
+      // Treat input dates as plain dates (no timezone) by parsing as UTC
+      const toUtcDate = (value: Date) => {
+        // Interpret provided Date's local calendar date as the intended date
+        const y = value.getFullYear();
+        const m = value.getMonth();
+        const d = value.getDate();
+        return new Date(Date.UTC(y, m, d));
+      };
+      const formatYmd = (dt: Date) => dt.toISOString().slice(0, 10);
 
-      const itineraryEntries = [];
-      const currentDate = new Date(startDate);
+      const startDateUtc = toUtcDate(data.startDate as Date);
+      const endDateUtc = toUtcDate(data.endDate as Date);
 
-      while (currentDate <= endDate) {
+      const itineraryEntries = [] as Array<{ tripId: string; date: string }>;
+      const currentUtc = new Date(startDateUtc);
+
+      while (currentUtc <= endDateUtc) {
         itineraryEntries.push({
           tripId: newTrip.id,
-          date: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
+          date: formatYmd(currentUtc), // YYYY-MM-DD in UTC
         });
 
-        currentDate.setDate(currentDate.getDate() + 1);
+        currentUtc.setUTCDate(currentUtc.getUTCDate() + 1);
       }
 
       // Insert all itinerary entries
@@ -124,11 +134,11 @@ export const reorderTripPlaces = createServerFn({ method: "POST" })
       throw new Error("Itinerary not found or access denied");
     }
 
-    const ids = data.orders.map(o => o.tripPlaceId);
+    const ids = data.orders.map((o) => o.tripPlaceId);
 
     // Build CASE expression using query builder
     const caseExpr = sql`CASE ${tripPlaces.id} ${sql.join(
-      data.orders.map(o => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
+      data.orders.map((o) => sql`WHEN ${o.tripPlaceId} THEN ${o.sortOrder}`),
       sql` `
     )} ELSE ${tripPlaces.sortOrder} END`;
 

@@ -10,8 +10,6 @@ export const getLatLng = createServerFn({ method: "POST" })
 
     const place = await response.json();
 
-    console.log({ place });
-
     return place.result.geometry.location as {
       lat: number;
       lng: number;
