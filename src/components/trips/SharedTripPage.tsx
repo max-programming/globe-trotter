@@ -18,6 +18,7 @@ import { Badge } from "~/components/ui/badge";
 import { getTripWithItineraryByShareIdQuery } from "~/lib/queries/trips";
 import { Heading } from "../generic/heading";
 import { TripMap } from "../maps/TripMap";
+import { cn } from "~/lib/utils";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -41,7 +42,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
   );
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays(prev => {
+    setExpandedDays((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
@@ -205,12 +206,14 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                   return (
                     <Card
                       key={day.id}
-                      className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                      className={cn(
+                        "bg-card/95 p-6 backdrop-blur-sm hover:bg-muted/50 transition-colors cursor-pointer relative z-0"
+                      )}
                     >
                       <CardContent className="p-0">
                         {/* Accordion Header */}
                         <button
-                          className="w-full p-4 flex items-center justify-between"
+                          className="w-full flex items-center justify-between cursor-pointer"
                           onClick={() => toggleDayExpansion(day.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`day-content-${day.id}`}
@@ -360,12 +363,12 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
                   center={{
                     lat: trip.place?.latitude || 0,
                     lng: trip.place?.longitude || 0,
                   }}
-                  onPlaceSelect={place => {
+                  onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
                   }}
