@@ -18,6 +18,7 @@ import {
 } from "~/lib/services/llm";
 import { searchPexelsImage } from "./pexels";
 import { searchAndGetPlaceDetails } from "./places-lookup";
+import { formatYmd, toUtcDate } from "~/lib/utils";
 
 export const generateRecommendations = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -49,7 +50,7 @@ export const generateRecommendations = createServerFn({ method: "POST" })
       const userProfile: UserProfile = {
         country: userWithData.country.name,
         city: userWithData.city?.name,
-        previousTrips: userWithData.trips.map(trip => ({
+        previousTrips: userWithData.trips.map((trip) => ({
           destinationName: trip.destinationName || "Unknown",
           duration:
             trip.startDate && trip.endDate
@@ -400,19 +401,19 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
       // Generate daily itinerary entries and convert activities to trip places
       let createdItinerary: any[] = [];
       if (data.startDate && data.endDate) {
-        const startDate = new Date(data.startDate);
-        const endDate = new Date(data.endDate);
+        const startDateUtc = toUtcDate(data.startDate);
+        const endDateUtc = toUtcDate(data.endDate);
 
         const itineraryEntries = [];
-        const currentDate = new Date(startDate);
+        const currentUtc = new Date(startDateUtc);
 
-        while (currentDate <= endDate) {
+        while (currentUtc <= endDateUtc) {
           itineraryEntries.push({
             tripId: newTrip.id,
-            date: currentDate.toISOString().split("T")[0], // Format as YYYY-MM-DD
+            date: formatYmd(currentUtc), // Format as YYYY-MM-DD
           });
 
-          currentDate.setDate(currentDate.getDate() + 1);
+          currentUtc.setUTCDate(currentUtc.getUTCDate() + 1);
         }
 
         // Insert all itinerary entries
@@ -432,7 +433,7 @@ export const convertRecommendationToTrip = createServerFn({ method: "POST" })
       ) {
         // Group activities by day
         const activitiesByDay: { [key: number]: any[] } = {};
-        recommendation.activities.forEach(activity => {
+        recommendation.activities.forEach((activity) => {
           const day = activity.suggestedDay || 1;
           if (!activitiesByDay[day]) {
             activitiesByDay[day] = [];

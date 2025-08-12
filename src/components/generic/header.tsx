@@ -15,10 +15,13 @@ import {
   SettingsIcon,
   User,
   UserIcon,
+  Home,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useSignOut } from "~/lib/mutations/auth/use-sign-out";
 import { Link } from "@tanstack/react-router";
+import { cn } from "~/lib/utils";
 
 export const Header = () => {
   const { data: session } = useQuery(getSessionQuery);
@@ -27,7 +30,7 @@ export const Header = () => {
   return (
     <>
       <div className="flex items-center justify-between p-4 h-20 bg-transparent">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-8">
           <div className="h-10 w-auto">
             <Link to="/">
               <img
@@ -37,6 +40,30 @@ export const Header = () => {
               />
             </Link>
           </div>
+          
+          {/* Navigation */}
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              to="/"
+              className={cn(
+                "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-muted",
+                "[&.active]:bg-primary/10 [&.active]:text-primary"
+              )}
+            >
+              <Home className="w-4 h-4" />
+              <span>My Trips</span>
+            </Link>
+            <Link
+              to="/community"
+              className={cn(
+                "flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-muted",
+                "[&.active]:bg-primary/10 [&.active]:text-primary"
+              )}
+            >
+              <Users className="w-4 h-4" />
+              <span>Community</span>
+            </Link>
+          </nav>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
