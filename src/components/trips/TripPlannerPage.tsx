@@ -56,6 +56,7 @@ import { useUpdateTripNotes } from "~/lib/mutations/trips/useTripNotes";
 import { toast } from "sonner";
 import { useShareTrip } from "~/lib/mutations/trips/useShareTrip";
 import { ShareTripDialog } from "./ShareTripDialog";
+import { cn } from "~/lib/utils";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -249,7 +250,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
             type="button"
             className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background/90 border rounded-full p-1 text-muted-foreground hover:text-destructive"
             aria-label="Remove place"
-            onClick={e => {
+            onClick={(e) => {
               e.stopPropagation();
               handleDeletePlace(place.id);
             }}
@@ -280,12 +281,12 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const searchPlacesForDay = useCallback(
     async (dayId: number, query: string) => {
       if (!query || query.length < 2) {
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
-        setDayIsSearching(prev => ({ ...prev, [dayId]: false }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
+        setDayIsSearching((prev) => ({ ...prev, [dayId]: false }));
         return;
       }
 
-      setDayIsSearching(prev => ({ ...prev, [dayId]: true }));
+      setDayIsSearching((prev) => ({ ...prev, [dayId]: true }));
 
       try {
         const searchParams = new URLSearchParams({
@@ -305,19 +306,19 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
         const data = await response.json();
 
         if (data.status === "success") {
-          setDayPlaceSuggestions(prev => ({
+          setDayPlaceSuggestions((prev) => ({
             ...prev,
             [dayId]: data.suggestions,
           }));
         } else {
           console.error("Places API error:", data.error);
-          setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+          setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
         }
       } catch (error) {
         console.error("Failed to fetch place suggestions:", error);
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
       } finally {
-        setDayIsSearching(prev => ({ ...prev, [dayId]: false }));
+        setDayIsSearching((prev) => ({ ...prev, [dayId]: false }));
       }
     },
     []
@@ -347,19 +348,19 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      Object.values(searchTimeoutRefs.current).forEach(timeout => {
+      Object.values(searchTimeoutRefs.current).forEach((timeout) => {
         if (timeout) clearTimeout(timeout);
       });
     };
   }, []);
 
   const handleDaySearchChange = (dayId: number, value: string) => {
-    setDaySearchQueries(prev => ({ ...prev, [dayId]: value }));
+    setDaySearchQueries((prev) => ({ ...prev, [dayId]: value }));
     debouncedSearchForDay(dayId, value);
-    setDayShowSuggestions(prev => ({ ...prev, [dayId]: true }));
+    setDayShowSuggestions((prev) => ({ ...prev, [dayId]: true }));
 
     if (!value) {
-      setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
+      setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
     }
   };
 
@@ -368,7 +369,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
     place: GooglePlaceSuggestion
   ) => {
     setSelectedPlace(place);
-    setDayShowSuggestions(prev => ({ ...prev, [dayId]: false }));
+    setDayShowSuggestions((prev) => ({ ...prev, [dayId]: false }));
   };
 
   const handleAddPlaceToDay = async (
@@ -392,8 +393,8 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       });
 
       // Clear the search for this day after successful addition
-      setDaySearchQueries(prev => ({ ...prev, [day.id]: "" }));
-      setDayPlaceSuggestions(prev => ({ ...prev, [day.id]: [] }));
+      setDaySearchQueries((prev) => ({ ...prev, [day.id]: "" }));
+      setDayPlaceSuggestions((prev) => ({ ...prev, [day.id]: [] }));
       setSelectedPlace(null);
     } catch (error) {
       console.error("Failed to add place:", error);
@@ -403,14 +404,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   };
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays(prev => {
+    setExpandedDays((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
         // Clear search state when collapsing
-        setDaySearchQueries(prev => ({ ...prev, [dayId]: "" }));
-        setDayPlaceSuggestions(prev => ({ ...prev, [dayId]: [] }));
-        setDayShowSuggestions(prev => ({ ...prev, [dayId]: false }));
+        setDaySearchQueries((prev) => ({ ...prev, [dayId]: "" }));
+        setDayPlaceSuggestions((prev) => ({ ...prev, [dayId]: [] }));
+        setDayShowSuggestions((prev) => ({ ...prev, [dayId]: false }));
       } else {
         newExpanded.add(dayId);
       }
@@ -576,7 +577,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                     <div className="space-y-2">
                       <Textarea
                         value={tripNotes}
-                        onChange={e => setTripNotes(e.target.value)}
+                        onChange={(e) => setTripNotes(e.target.value)}
                         placeholder="Add your personal notes about this trip..."
                         className="min-h-20 text-sm"
                         rows={3}
@@ -626,27 +627,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
             {/* Daily Itinerary - Accordion Style */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Daily Itinerary</h2>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setExpandedDays(new Set(itinerary.map((d: any) => d.id)))
-                    }
-                    aria-label="Expand all days"
-                  >
-                    Expand all
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setExpandedDays(new Set())}
-                    aria-label="Collapse all days"
-                  >
-                    Collapse all
-                  </Button>
-                </div>
+                <Heading>Daily Itinerary</Heading>
               </div>
 
               {itinerary.length === 0 ? (
@@ -672,15 +653,20 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 
                   return (
                     <div
-                      ref={el => {
+                      ref={(el) => {
                         dayCardRefs.current[day.id] = el;
                       }}
                     >
-                      <Card className="bg-card/95 backdrop-blur-sm">
+                      <Card
+                        className={cn(
+                          "bg-card/95 p-6 backdrop-blur-sm hover:bg-muted/50 transition-colors cursor-pointer relative",
+                          showSuggestions ? "z-30" : "z-0"
+                        )}
+                      >
                         <CardContent className="p-0">
                           {/* Accordion Header */}
                           <button
-                            className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                            className="w-full flex items-center justify-between cursor-pointer"
                             onClick={() => toggleDayExpansion(day.id)}
                             aria-expanded={isExpanded}
                             aria-controls={`day-content-${day.id}`}
@@ -716,7 +702,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                           {isExpanded && (
                             <div
                               id={`day-content-${day.id}`}
-                              className="border-t bg-background/50"
+                              className="border-t bg-background/50 mt-2"
                             >
                               <div className="p-4 space-y-4">
                                 {/* Day Notes */}
@@ -740,7 +726,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                     <DndContext
                                       sensors={sensors}
                                       collisionDetection={closestCenter}
-                                      onDragEnd={e => handleDragEnd(day, e)}
+                                      onDragEnd={(e) => handleDragEnd(day, e)}
                                     >
                                       <SortableContext
                                         items={day.places.map((p: any) => p.id)}
@@ -786,7 +772,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                         size="sm"
                                         variant="secondary"
                                         onClick={() => {
-                                          setExpandedDays(prev =>
+                                          setExpandedDays((prev) =>
                                             new Set(prev).add(day.id)
                                           );
                                           daySearchInputRefs.current[
@@ -811,14 +797,14 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                       placeholder="Add place"
                                       className="pl-9"
                                       value={daySearchQuery}
-                                      onChange={e =>
+                                      onChange={(e) =>
                                         handleDaySearchChange(
                                           day.id,
                                           e.target.value
                                         )
                                       }
                                       onFocus={() =>
-                                        setDayShowSuggestions(prev => ({
+                                        setDayShowSuggestions((prev) => ({
                                           ...prev,
                                           [day.id]: true,
                                         }))
@@ -826,7 +812,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                       onBlur={() => {
                                         setTimeout(
                                           () =>
-                                            setDayShowSuggestions(prev => ({
+                                            setDayShowSuggestions((prev) => ({
                                               ...prev,
                                               [day.id]: false,
                                             })),
@@ -834,7 +820,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                         );
                                       }}
                                       aria-label={`Add place for ${format(new Date(day.date), "EEEE, MMMM d")}`}
-                                      ref={el => {
+                                      ref={(el) => {
                                         daySearchInputRefs.current[day.id] = el;
                                       }}
                                     />
@@ -845,11 +831,11 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                         variant="ghost"
                                         className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
                                         onClick={() => {
-                                          setDaySearchQueries(prev => ({
+                                          setDaySearchQueries((prev) => ({
                                             ...prev,
                                             [day.id]: "",
                                           }));
-                                          setDayPlaceSuggestions(prev => ({
+                                          setDayPlaceSuggestions((prev) => ({
                                             ...prev,
                                             [day.id]: [],
                                           }));
@@ -869,7 +855,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                                             <span>Searching...</span>
                                           </div>
                                         ) : dayPlaces.length > 0 ? (
-                                          dayPlaces.map(place => (
+                                          dayPlaces.map((place) => (
                                             <button
                                               key={place.place_id}
                                               type="button"
@@ -939,8 +925,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                       lng: data.trip.place.longitude || 0,
                     }}
                     selectedPlace={selectedPlace}
-                    itineraryPlaces={itinerary.flatMap(day => day.places || [])}
-                    itineraryDays={itinerary.map(d => ({
+                    itineraryPlaces={itinerary.flatMap(
+                      (day) => day.places || []
+                    )}
+                    itineraryDays={itinerary.map((d) => ({
                       id: d.id,
                       date: d.date,
                     }))}
@@ -957,7 +945,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                           placeTypes: marker.details?.types || [],
                         });
                         // Expand day and scroll into view
-                        setExpandedDays(prev => new Set(prev).add(dayId));
+                        setExpandedDays((prev) => new Set(prev).add(dayId));
                         const el = dayCardRefs.current[dayId];
                         if (el) {
                           el.scrollIntoView({
@@ -971,7 +959,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                         toast.error("Failed to add place");
                       }
                     }}
-                    onPlaceSelect={place => {
+                    onPlaceSelect={(place) => {
                       // Handle place selection from map if needed
                       console.log("Place selected from map:", place);
                     }}
