@@ -55,8 +55,8 @@ export function UserProfileDisplay() {
     day: "numeric",
   });
 
-  const country = countries.find((c) => c.id === currentUser.countryId);
-  const city = cities.find((c) => c.id === currentUser.cityId);
+  const country = countries.find(c => c.id === currentUser.countryId);
+  const city = cities.find(c => c.id === currentUser.cityId);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -159,7 +159,7 @@ export function UserProfileDisplay() {
             </Card>
 
             {/* Location Info */}
-            {(currentUser.cityId || currentUser.countryId) && (
+            {
               <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-3">
@@ -183,7 +183,7 @@ export function UserProfileDisplay() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            }
 
             {/* Member Since */}
             <Card className="shadow-lg border-0 bg-card/95 backdrop-blur-sm">
@@ -206,7 +206,7 @@ export function UserProfileDisplay() {
           {/* Travel Stats - Horizontal */}
           <Card className="shadow-xl border-0 bg-card/95 backdrop-blur-sm">
             <CardHeader className="pb-0">
-              <CardTitle className="flex items-center space-x-2 text-lg">
+              <CardTitle className="flex items-center space-x-2 text-lg justify-center">
                 <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                   <Globe className="w-4 h-4 text-white" />
                 </div>
@@ -214,18 +214,12 @@ export function UserProfileDisplay() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
                 <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
+                  <p className="text-2xl font-bold text-primary">
+                    {currentUser.trips.length}
+                  </p>
                   <p className="text-xs text-muted-foreground">Trips</p>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-xs text-muted-foreground">Countries</p>
-                </div>
-                <div className="text-center space-y-1">
-                  <p className="text-2xl font-bold text-primary">0</p>
-                  <p className="text-xs text-muted-foreground">Cities</p>
                 </div>
               </div>
             </CardContent>

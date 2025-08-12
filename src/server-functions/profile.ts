@@ -53,6 +53,7 @@ export const getCurrentUser = createServerFn({ method: "GET" }).handler(
       with: {
         country: true,
         city: true,
+        trips: true,
       },
     });
 
