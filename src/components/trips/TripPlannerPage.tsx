@@ -216,23 +216,25 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
 
     return (
       <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-        <div className="group w-full p-3 rounded-lg border bg-background flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors relative">
-          <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab flex-shrink-0" />
+        <div
+          className="group w-full p-3 rounded-lg border bg-background flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors relative cursor-pointer"
+          onClick={onClick}
+        >
+          <GripVertical className="w-4 h-full text-muted-foreground cursor-grab flex-shrink-0" />
           <div className="flex items-center justify-center w-5 h-5 bg-primary-600 text-white rounded-full font-medium text-[11px] flex-shrink-0">
             {index + 1}
           </div>
           <div className="flex-1">
             <button
               type="button"
-              onClick={onClick}
               className="block text-left"
               aria-label={`View ${place.place?.name || place.name}`}
             >
-              <h5 className="font-medium text-sm">
+              <h5 className="font-medium text-sm cursor-pointer">
                 {place.place?.name || "Unknown Place"}
               </h5>
               {description && (
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2 cursor-pointer">
                   {description}
                 </p>
               )}
@@ -625,7 +627,7 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
             </div>
 
             {/* Daily Itinerary - Accordion Style */}
-            <div className="space-y-3">
+            <div className="space-y-3 mb-20">
               <div className="flex items-center justify-between">
                 <Heading>Daily Itinerary</Heading>
               </div>

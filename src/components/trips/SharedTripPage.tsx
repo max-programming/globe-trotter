@@ -18,6 +18,7 @@ import { Badge } from "~/components/ui/badge";
 import { getTripWithItineraryByShareIdQuery } from "~/lib/queries/trips";
 import { Heading } from "../generic/heading";
 import { TripMap } from "../maps/TripMap";
+import { cn } from "~/lib/utils";
 
 interface GooglePlaceSuggestion {
   place_id: string;
@@ -41,7 +42,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
   );
 
   const toggleDayExpansion = (dayId: number) => {
-    setExpandedDays(prev => {
+    setExpandedDays((prev) => {
       const newExpanded = new Set(prev);
       if (newExpanded.has(dayId)) {
         newExpanded.delete(dayId);
@@ -83,53 +84,113 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
     0
   );
 
+  function PlaceCard({
+    place,
+    index,
+    onClick,
+  }: {
+    place: any;
+    index: number;
+    onClick: () => void;
+  }) {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+    const thumbnailUrl: string | undefined =
+      place.place?.photoReference && apiKey
+        ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=160&photo_reference=${encodeURIComponent(
+            place.place.photoReference
+          )}&key=${apiKey}`
+        : place.place?.destinationImageUrl || undefined;
+
+    const description: string | undefined =
+      place.place?.secondaryText ||
+      place.place?.formattedAddress ||
+      place.userNotes ||
+      (Array.isArray(place.place?.placeTypes)
+        ? place.place.placeTypes.slice(0, 3).join(", ")
+        : undefined);
+
+    return (
+      <div
+        className="group w-full p-3 rounded-lg border bg-background flex items-center justify-between gap-3 hover:bg-muted/30 transition-colors relative cursor-pointer"
+        onClick={onClick}
+      >
+        <div className="flex items-center justify-center w-5 h-5 bg-primary-600 text-white rounded-full font-medium text-[11px] flex-shrink-0">
+          {index + 1}
+        </div>
+        <div className="flex-1">
+          <button
+            type="button"
+            className="block text-left"
+            aria-label={`View ${place.place?.name || place.name || ""}`}
+          >
+            <h5 className="font-medium text-sm cursor-pointer">
+              {place.place?.name || "Unknown Place"}
+            </h5>
+            {description && (
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2 cursor-pointer">
+                {description}
+              </p>
+            )}
+          </button>
+        </div>
+        {thumbnailUrl && (
+          <img
+            src={thumbnailUrl}
+            alt={place.place?.name || place.name || "Place"}
+            className="w-36 h-20 rounded-md object-cover flex-shrink-0"
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen ">
       <div className="px-10 ms:pl-10">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Left Side - Trip Itinerary */}
-          <div className="md:col-span-7 flex flex-col space-y-4 pt-6">
+          <div className="md:col-span-7 flex flex-col space-y-4">
             {/* Trip Header */}
-            <div className="relative ">
+            <div className="relative overflow-hidden mt-6">
               {/* Cover Image Background */}
               <div className="relative h-64 bg-transparent">
                 {trip.destinationImageUrl && (
-                  <div className="rounded-xl ">
+                  <div className="rounded-xl overflow-hidden">
                     <img
                       src={trip.destinationImageUrl}
                       alt={trip.name}
-                      className="absolute inset-0 w-full h-full object-cover rounded-xl "
+                      className="absolute inset-0 w-full h-full object-cover rounded-xl overflow-hidden"
                     />
-                    <div className="absolute inset-0 bg-black/40 rounded-xl " />
+                    <div className="absolute inset-0 bg-black/40 rounded-xl overflow-hidden" />
                   </div>
                 )}
 
                 {/* Content Overlay */}
-                <div className="relative z-20 h-full flex flex-col justify-end rounded-xl">
+                <div className="z-10 h-full flex flex-col justify-end rounded-xl overflow-hidden">
                   {/* Trip Title and Location */}
-                  <div className="space-y-2 bg-white max-w-2/4 w-full py-6 px-8 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 z-30">
-                    <Heading className="text-2xl font-bold text-gray-800">
+                  <div className="space-y-2 bg-white max-w-2/4 w-full py-4 p-10 rounded-lg shadow-lg absolute left-1/2 -translate-x-1/2 -bottom-1/2 -translate-y-1/2 ">
+                    <Heading className="text-2xl font-bold text-white drop-shadow-lg">
                       {trip.name}
                     </Heading>
                     {trip.destinationName && (
-                      <div className="flex items-center space-x-2 text-gray-600">
+                      <div className="flex items-center space-x-2">
                         <MapPin className="w-4 h-4" />
-                        <span className="text-sm font-medium">
+                        <span className="text-sm font-medium drop-shadow">
                           {trip.destinationName}
                         </span>
                       </div>
                     )}
                     {trip.startDate && trip.endDate && (
-                      <div className="flex items-center space-x-2 text-gray-600">
+                      <div className="flex items-center space-x-2 ">
                         <Calendar className="w-4 h-4" />
-                        <span className="text-sm">
+                        <span className="text-sm drop-shadow">
                           {format(new Date(trip.startDate), "MMM d")} -{" "}
                           {format(new Date(trip.endDate), "MMM d, yyyy")}
                         </span>
                       </div>
                     )}
                   </div>
-                  <div className="absolute top-2 right-2 z-20">
+                  <div className="absolute top-2 right-2 ">
                     {shareInfo && (
                       <div className="bg-white/20 border-white/30 backdrop-blur-sm rounded-lg px-3 py-2">
                         <div className="flex items-center space-x-2 text-white text-sm">
@@ -143,47 +204,34 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
               </div>
 
               {/* Trip Notes Section */}
-              {trip.notes && (
-                <div className="p-4 bg-background/95 pt-20 mt-8">
-                  <div className="space-y-3">
+              <div className="p-4 bg-background/95 pt-16">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <h3 className="font-medium flex items-center space-x-2">
                       <StickyNote className="w-4 h-4" />
                       <span>Trip Notes</span>
                     </h3>
-                    <div className="min-h-8">
+                  </div>
+
+                  <div className="min-h-8">
+                    {trip.notes ? (
                       <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                         ➤ {trip.notes}
                       </p>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground/60 italic">
+                        No notes added yet
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Daily Itinerary - Accordion Style */}
-            <div className="space-y-3 mt-20">
+            <div className="space-y-3 mb-20">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Daily Itinerary</h2>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setExpandedDays(new Set(itinerary.map((d: any) => d.id)))
-                    }
-                    aria-label="Expand all days"
-                  >
-                    Expand all
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setExpandedDays(new Set())}
-                    aria-label="Collapse all days"
-                  >
-                    Collapse all
-                  </Button>
-                </div>
+                <Heading>Daily Itinerary</Heading>
               </div>
 
               {itinerary.length === 0 ? (
@@ -205,12 +253,14 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                   return (
                     <Card
                       key={day.id}
-                      className="bg-card/95 backdrop-blur-sm hover:bg-muted/50 transition-colors p-3"
+                      className={cn(
+                        "bg-card/95 p-6 backdrop-blur-sm hover:bg-muted/50 transition-colors cursor-pointer relative"
+                      )}
                     >
                       <CardContent className="p-0">
                         {/* Accordion Header */}
                         <button
-                          className="w-full p-4 flex items-center justify-between"
+                          className="w-full flex items-center justify-between cursor-pointer"
                           onClick={() => toggleDayExpansion(day.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`day-content-${day.id}`}
@@ -266,9 +316,10 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                                     Planned Places
                                   </h4>
                                   {day.places.map((place, placeIndex) => (
-                                    <button
+                                    <PlaceCard
                                       key={place.id}
-                                      type="button"
+                                      place={place}
+                                      index={placeIndex}
                                       onClick={() =>
                                         setSelectedPlace({
                                           place_id: place.placeId,
@@ -279,47 +330,7 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
                                           types: [],
                                         })
                                       }
-                                      className="w-full text-left p-3 rounded-lg border bg-background flex items-center gap-3 hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                                      aria-label={`View ${place.place?.name || ""}`}
-                                    >
-                                      <div className="flex items-center justify-center w-5 h-5 bg-primary-100 text-primary-700 rounded-full font-medium text-xs">
-                                        {placeIndex + 1}
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <h5 className="font-medium text-sm">
-                                            {place.place?.name ||
-                                              "Unknown Place"}
-                                          </h5>
-                                          {place.scheduledTime && (
-                                            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                                              <Clock className="w-3 h-3" />
-                                              <span>{place.scheduledTime}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                        {place.place?.formattedAddress && (
-                                          <p className="text-xs text-muted-foreground">
-                                            {place.place?.formattedAddress}
-                                          </p>
-                                        )}
-
-                                        {place.userNotes && (
-                                          <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                            {place.userNotes}
-                                          </p>
-                                        )}
-                                      </div>
-                                      {place.userRating && (
-                                        <div className="flex items-center space-x-1">
-                                          <Star className="w-3 h-3 text-yellow-500" />
-                                          <span className="text-xs">
-                                            {place.userRating}
-                                          </span>
-                                        </div>
-                                      )}
-                                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                                    </button>
+                                    />
                                   ))}
                                 </div>
                               ) : (
@@ -360,12 +371,12 @@ export function SharedTripPage({ shareId }: SharedTripPageProps) {
               <div className="flex-1 min-h-0">
                 <TripMap
                   selectedPlace={selectedPlace}
-                  itineraryPlaces={itinerary.flatMap(day => day.places || [])}
+                  itineraryPlaces={itinerary.flatMap((day) => day.places || [])}
                   center={{
                     lat: trip.place?.latitude || 0,
                     lng: trip.place?.longitude || 0,
                   }}
-                  onPlaceSelect={place => {
+                  onPlaceSelect={(place) => {
                     // Handle place selection from map if needed
                     console.log("Place selected from map:", place);
                   }}
