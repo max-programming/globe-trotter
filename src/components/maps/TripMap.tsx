@@ -203,7 +203,7 @@ function TripMapInternal({
     async (placeId: string, type: "search" | "itinerary") => {
       if (!placesService.current) return null;
 
-      return new Promise<PlaceMarker | null>(resolve => {
+      return new Promise<PlaceMarker | null>((resolve) => {
         const request = {
           placeId: placeId,
           fields: [
@@ -265,9 +265,9 @@ function TripMapInternal({
     const updateSelectedPlaceMarker = async () => {
       const marker = await fetchPlaceDetails(selectedPlace.place_id, "search");
       if (marker) {
-        setMarkers(prev => {
+        setMarkers((prev) => {
           // Remove any existing search markers and add the new one
-          const filtered = prev.filter(m => m.type !== "search");
+          const filtered = prev.filter((m) => m.type !== "search");
           return [...filtered, marker];
         });
 
@@ -324,9 +324,9 @@ function TripMapInternal({
         }
       }
 
-      setMarkers(prev => {
+      setMarkers((prev) => {
         // Keep search markers, replace itinerary markers
-        const searchMarkers = prev.filter(m => m.type === "search");
+        const searchMarkers = prev.filter((m) => m.type === "search");
         return [...searchMarkers, ...itineraryMarkers];
       });
     };
@@ -348,7 +348,7 @@ function TripMapInternal({
   // Compute once per itineraryPlaces change.
   // Must be declared before any early returns to keep hook order stable.
   const alreadyAddedPlaceIds = useMemo(
-    () => new Set(itineraryPlaces.map(p => p.placeId)),
+    () => new Set(itineraryPlaces.map((p) => p.placeId)),
     [itineraryPlaces]
   );
 
@@ -388,16 +388,16 @@ function TripMapInternal({
       onLoad={onLoad}
       onUnmount={onUnmount}
       options={mapOptions}
-      onClick={e => {
+      onClick={(e) => {
         const placeId = (e as any)?.placeId as string | undefined;
         if (!placesService.current) return;
         if (placeId) {
           // Prevent default info window
           (e as any).stop();
-          fetchPlaceDetails(placeId, "search").then(marker => {
+          fetchPlaceDetails(placeId, "search").then((marker) => {
             if (!marker) return;
-            setMarkers(prev => {
-              const filtered = prev.filter(m => m.type !== "search");
+            setMarkers((prev) => {
+              const filtered = prev.filter((m) => m.type !== "search");
               return [...filtered, marker];
             });
             setSelectedMarker(marker);
@@ -425,10 +425,10 @@ function TripMapInternal({
             ) {
               const nearest = results[0];
               if (nearest.place_id) {
-                fetchPlaceDetails(nearest.place_id, "search").then(marker => {
+                fetchPlaceDetails(nearest.place_id, "search").then((marker) => {
                   if (!marker) return;
-                  setMarkers(prev => {
-                    const filtered = prev.filter(m => m.type !== "search");
+                  setMarkers((prev) => {
+                    const filtered = prev.filter((m) => m.type !== "search");
                     return [...filtered, marker];
                   });
                   setSelectedMarker(marker);
@@ -445,7 +445,7 @@ function TripMapInternal({
         );
       }}
     >
-      {markers.map(marker => (
+      {markers.map((marker) => (
         <Marker
           key={`${marker.placeId}-${marker.type}`}
           position={marker.position}
@@ -487,7 +487,7 @@ function TripMapInternal({
                     )}
                     {selectedMarker.details?.types && (
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {selectedMarker.details.types.slice(0, 3).map(t => (
+                        {selectedMarker.details.types.slice(0, 3).map((t) => (
                           <span
                             key={t}
                             className="px-2 py-0.5 rounded-full bg-muted text-[10px] text-muted-foreground"
@@ -589,11 +589,13 @@ function TripMapInternal({
                       <select
                         className="h-8 rounded-md border bg-background px-2 text-xs"
                         value={selectedDayId}
-                        onChange={e => setSelectedDayId(Number(e.target.value))}
+                        onChange={(e) =>
+                          setSelectedDayId(Number(e.target.value))
+                        }
                         aria-label="Choose day to add"
                         disabled={isAdding}
                       >
-                        {itineraryDays.map(d => (
+                        {itineraryDays.map((d) => (
                           <option key={d.id} value={d.id}>
                             {new Date(d.date).toLocaleDateString(undefined, {
                               month: "short",

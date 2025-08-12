@@ -59,7 +59,7 @@ export async function generateTripRecommendations(userProfile: UserProfile) {
     ${
       userProfile.previousTrips
         .map(
-          trip =>
+          (trip) =>
             `- ${trip.destinationName} (${trip.duration || "unknown"} days, ${trip.tripType || "general"} trip)`
         )
         .join("\n") || "No previous trips recorded"
@@ -67,6 +67,7 @@ export async function generateTripRecommendations(userProfile: UserProfile) {
 
     Requirements:
     - Suggest destinations different from their previous trips but within reasonable travel distance/budget
+    - Make sure the destinations are popular and well-known and real places.
     - Consider their location for practical travel options
     - Vary trip types and durations (weekend trips, week-long, extended trips)
     - Include specific activities for each day of the trip

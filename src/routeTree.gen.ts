@@ -16,6 +16,7 @@ import { Route as authRouteRouteImport } from './routes/(auth)/route'
 import { Route as protectedIndexRouteImport } from './routes/(protected)/index'
 import { Route as ViewShareIdRouteImport } from './routes/view.$shareId'
 import { Route as protectedProfileRouteImport } from './routes/(protected)/profile'
+import { Route as protectedCommunityRouteImport } from './routes/(protected)/community'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
 import { Route as protectedTripsNewRouteImport } from './routes/(protected)/trips/new'
@@ -48,6 +49,11 @@ const ViewShareIdRoute = ViewShareIdRouteImport.update({
 const protectedProfileRoute = protectedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => protectedRouteRoute,
+} as any)
+const protectedCommunityRoute = protectedCommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
   getParentRoute: () => protectedRouteRoute,
 } as any)
 const authSignUpRoute = authSignUpRouteImport.update({
@@ -98,6 +104,7 @@ export interface FileRoutesByFullPath {
   '/': typeof protectedIndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/community': typeof protectedCommunityRoute
   '/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
   '/recommendations/$recommendationId': typeof protectedRecommendationsRecommendationIdRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/': typeof protectedIndexRoute
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
+  '/community': typeof protectedCommunityRoute
   '/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
   '/recommendations/$recommendationId': typeof protectedRecommendationsRecommendationIdRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/(protected)': typeof protectedRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
+  '/(protected)/community': typeof protectedCommunityRoute
   '/(protected)/profile': typeof protectedProfileRoute
   '/view/$shareId': typeof ViewShareIdRoute
   '/(protected)/': typeof protectedIndexRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
+    | '/community'
     | '/profile'
     | '/view/$shareId'
     | '/recommendations/$recommendationId'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-up'
+    | '/community'
     | '/profile'
     | '/view/$shareId'
     | '/recommendations/$recommendationId'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/(protected)'
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
+    | '/(protected)/community'
     | '/(protected)/profile'
     | '/view/$shareId'
     | '/(protected)/'
@@ -234,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof protectedProfileRouteImport
+      parentRoute: typeof protectedRouteRoute
+    }
+    '/(protected)/community': {
+      id: '/(protected)/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof protectedCommunityRouteImport
       parentRoute: typeof protectedRouteRoute
     }
     '/(auth)/sign-up': {
@@ -314,6 +333,7 @@ const authRouteRouteWithChildren = authRouteRoute._addFileChildren(
 )
 
 interface protectedRouteRouteChildren {
+  protectedCommunityRoute: typeof protectedCommunityRoute
   protectedProfileRoute: typeof protectedProfileRoute
   protectedIndexRoute: typeof protectedIndexRoute
   protectedRecommendationsRecommendationIdRoute: typeof protectedRecommendationsRecommendationIdRoute
@@ -323,6 +343,7 @@ interface protectedRouteRouteChildren {
 }
 
 const protectedRouteRouteChildren: protectedRouteRouteChildren = {
+  protectedCommunityRoute: protectedCommunityRoute,
   protectedProfileRoute: protectedProfileRoute,
   protectedIndexRoute: protectedIndexRoute,
   protectedRecommendationsRecommendationIdRoute:

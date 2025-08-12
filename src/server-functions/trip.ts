@@ -12,6 +12,7 @@ import {
 } from "~/lib/db/schema";
 import { eq, and, inArray, sql, asc } from "drizzle-orm";
 import { customAlphabet } from "nanoid";
+import { formatYmd, toUtcDate } from "~/lib/utils";
 
 export const createTrip = createServerFn({ method: "POST" })
   .validator(createTripSchema)
@@ -57,19 +58,9 @@ export const createTrip = createServerFn({ method: "POST" })
       })
       .returning();
 
-    console.log({ sd: data.startDate, ed: data.endDate });
-
     // Generate daily itinerary entries if dates are provided
     if (data.startDate && data.endDate) {
       // Treat input dates as plain dates (no timezone) by parsing as UTC
-      const toUtcDate = (value: Date) => {
-        // Interpret provided Date's local calendar date as the intended date
-        const y = value.getFullYear();
-        const m = value.getMonth();
-        const d = value.getDate();
-        return new Date(Date.UTC(y, m, d));
-      };
-      const formatYmd = (dt: Date) => dt.toISOString().slice(0, 10);
 
       const startDateUtc = toUtcDate(data.startDate as Date);
       const endDateUtc = toUtcDate(data.endDate as Date);
