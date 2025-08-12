@@ -7,7 +7,11 @@ export function useUpdateTripNotes() {
   const updateTripNotesFn = useServerFn(updateTripNotes);
 
   return useMutation({
-    mutationFn: async (data: { tripId: string; notes: string }) => {
+    mutationFn: async (data: {
+      tripId: string;
+      notes: string;
+      budget: number;
+    }) => {
       return await updateTripNotesFn({ data });
     },
     onSuccess: (data, variables) => {

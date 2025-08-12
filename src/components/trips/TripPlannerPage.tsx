@@ -117,6 +117,8 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
+  const [tripBudget, setTripBudget] = useState(data.trip.totalBudget ?? 0);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
 
   const handleDragEnd = async (day: any, event: DragEndEvent) => {
     const { active, over } = event;
@@ -431,8 +433,10 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
       await updateTripNotesMutation.mutateAsync({
         tripId,
         notes: tripNotes,
+        budget: tripBudget,
       });
       setIsEditingNotes(false);
+      setIsEditingBudget(false);
     } catch (error) {
       console.error("Failed to save trip notes:", error);
     }
@@ -607,30 +611,6 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                         className="min-h-20 text-sm"
                         rows={3}
                       />
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={handleCancelEditNotes}
-                          disabled={updateTripNotesMutation.isPending}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveTripNotes}
-                          disabled={updateTripNotesMutation.isPending}
-                        >
-                          {updateTripNotesMutation.isPending ? (
-                            <>
-                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            "Save Notes"
-                          )}
-                        </Button>
-                      </div>
                     </div>
                   ) : (
                     <div className="min-h-8">
@@ -643,6 +623,63 @@ export function TripPlannerPage({ tripId }: TripPlannerPageProps) {
                           No notes added yet
                         </p>
                       )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span>Budget:</span>
+                      <span>{tripBudget}</span>
+                    </div>
+                    {!isEditingBudget && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsEditingBudget(true)}
+                      >
+                        {tripBudget ? (
+                          <Pencil className="w-3 h-3" />
+                        ) : (
+                          <Plus className="w-3 h-3" />
+                        )}
+                        {tripBudget ? "Edit" : "Add"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {isEditingBudget && (
+                    <div className="space-y-2">
+                      <Input
+                        type="number"
+                        value={tripBudget}
+                        onChange={e => setTripBudget(Number(e.target.value))}
+                      />
+                    </div>
+                  )}
+                  {(isEditingBudget || isEditingNotes) && (
+                    <div className="flex items-center justify-end space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEditNotes}
+                        disabled={updateTripNotesMutation.isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveTripNotes}
+                        disabled={updateTripNotesMutation.isPending}
+                      >
+                        {updateTripNotesMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
                     </div>
                   )}
                 </div>

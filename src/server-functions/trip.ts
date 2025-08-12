@@ -528,6 +528,7 @@ export const updateTripNotes = createServerFn({ method: "POST" })
     z.object({
       tripId: z.string(),
       notes: z.string(),
+      budget: z.number().optional(),
     })
   )
   .middleware([authMiddleware])
@@ -547,6 +548,7 @@ export const updateTripNotes = createServerFn({ method: "POST" })
       .update(trips)
       .set({
         notes: data.notes,
+        totalBudget: data.budget,
         updatedAt: new Date(),
       })
       .where(eq(trips.id, data.tripId))
@@ -682,4 +684,27 @@ export const createTripShare = createServerFn({ method: "POST" })
       .where(eq(trips.id, data.tripId));
 
     return { shareId };
+  });
+
+export const updateTripBudget = createServerFn({ method: "POST" })
+  .validator(z.object({ tripId: z.string(), budget: z.number() }))
+  .middleware([authMiddleware])
+  .handler(async ({ data, context }) => {
+    const trip = await db.query.trips.findFirst({
+      where: eq(trips.id, data.tripId),
+    });
+
+    if (!trip) {
+      throw new Error("Trip not found or access denied");
+    }
+
+    await db
+      .update(trips)
+      .set({
+        totalBudget: data.budget,
+        updatedAt: new Date(),
+      })
+      .where(eq(trips.id, data.tripId));
+
+    return { success: true };
   });
