@@ -38,6 +38,7 @@ export interface CommunityTrip {
     latitude: number | null;
     longitude: number | null;
   } | null;
+  shareToken?: string | null;
   itinerary?: {
     id: number;
     date: string | Date;

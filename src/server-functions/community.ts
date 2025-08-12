@@ -9,6 +9,7 @@ import {
   places,
   tripItinerary,
   tripPlaces,
+  sharedTrips,
 } from "~/lib/db";
 import { authMiddleware } from "./auth-middleware";
 
@@ -76,11 +77,14 @@ export const getPublicTrips = createServerFn({ method: "GET" })
           latitude: places.latitude,
           longitude: places.longitude,
         },
+        // Share token for viewing
+        shareToken: sharedTrips.shareToken,
       })
       .from(trips)
       .innerJoin(users, eq(trips.userId, users.id))
       .leftJoin(tripStops, eq(trips.id, tripStops.tripId))
       .leftJoin(places, eq(trips.placeId, places.placeId))
+      .leftJoin(sharedTrips, and(eq(sharedTrips.tripId, trips.id), eq(sharedTrips.isActive, true)))
       .where(and(...whereConditions))
       .groupBy(
         trips.id,
@@ -98,7 +102,8 @@ export const getPublicTrips = createServerFn({ method: "GET" })
         users.name,
         users.image,
         places.latitude,
-        places.longitude
+        places.longitude,
+        sharedTrips.shareToken
       )
       .orderBy(desc(trips.createdAt))
       .limit(limit)

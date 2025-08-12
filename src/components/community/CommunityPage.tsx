@@ -32,6 +32,7 @@ export function CommunityPage() {
     data?.pages.flatMap((page) => page.trips) || []
   ).map((t) => ({
     ...t,
+    shareToken: (t as any).shareToken ?? null,
     createdAt: new Date(t.createdAt as any),
     startDate: t.startDate ? new Date(t.startDate as any) : null,
     endDate: t.endDate ? new Date(t.endDate as any) : null,

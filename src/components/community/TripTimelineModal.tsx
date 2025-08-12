@@ -9,6 +9,7 @@ import {
   User,
   X,
   Route,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -61,6 +62,12 @@ export function TripTimelineModal({
   const displayImage = trip.coverImageUrl || trip.destinationImageUrl;
   const totalPlaces =
     trip.itinerary?.reduce((acc, day) => acc + day.places.length, 0) || 0;
+
+  const handleViewSharedTrip = () => {
+    if (trip.shareToken) {
+      window.open(`/view/${trip.shareToken}`, "_blank");
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -124,14 +131,25 @@ export function TripTimelineModal({
                 </div>
               </div>
 
-              <Button
-                onClick={() => onSaveTrip(trip.id)}
-                disabled={isSaving}
-                className="flex-shrink-0"
-                size="sm"
-              >
-                {isSaving ? "Saving..." : "Save Trip"}
-              </Button>
+              <div className="flex gap-2 flex-shrink-0">
+                {trip.shareToken && (
+                  <Button
+                    onClick={handleViewSharedTrip}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Trip
+                  </Button>
+                )}
+                <Button
+                  onClick={() => onSaveTrip(trip.id)}
+                  disabled={isSaving}
+                  size="sm"
+                >
+                  {isSaving ? "Saving..." : "Save Trip"}
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
